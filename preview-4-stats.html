@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Auto-Skip — Stats</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0a0a0a;
+        --line: #2a2a2a;
+        --ink: #f4f1ea;
+        --ink-dim: #6a6a6a;
+        --ink-mid: #9a9a9a;
+        --red: #e50914;
+        --red-glow: rgba(229, 9, 20, 0.45);
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body { width: 100%; height: 100%; overflow: hidden; }
+      body {
+        font-family: "JetBrains Mono", ui-monospace, monospace;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 80% 20%, rgba(229, 9, 20, 0.15), transparent 50%),
+          radial-gradient(circle at 20% 80%, rgba(229, 9, 20, 0.08), transparent 50%),
+          #050505;
+        min-height: 100vh;
+        padding: 50px;
+        display: flex;
+        flex-direction: column;
+      }
+
+      body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background:
+          repeating-linear-gradient(
+            to bottom,
+            transparent 0,
+            transparent 3px,
+            rgba(255, 255, 255, 0.012) 3px,
+            rgba(255, 255, 255, 0.012) 4px
+          ),
+          url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence baseFrequency='0.85'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.5 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+        opacity: 1;
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 60px;
+      }
+      .brand {
+        font-family: "Anton", sans-serif;
+        font-size: 24px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .brand em { color: var(--red); font-style: normal; }
+      .channel-strip {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        font-size: 10px;
+        letter-spacing: 0.22em;
+        color: var(--ink-dim);
+        text-transform: uppercase;
+      }
+      .live-dot {
+        width: 7px;
+        height: 7px;
+        background: var(--red);
+        border-radius: 50%;
+        box-shadow: 0 0 10px var(--red-glow);
+        animation: pulse 1.4s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.4; }
+      }
+
+      .hero {
+        text-align: center;
+        margin-bottom: 50px;
+      }
+      .hero-eyebrow {
+        font-size: 11px;
+        letter-spacing: 0.32em;
+        color: var(--ink-mid);
+        text-transform: uppercase;
+        margin-bottom: 14px;
+      }
+      .hero-num {
+        font-family: "Anton", sans-serif;
+        font-size: 220px;
+        line-height: 0.85;
+        color: var(--red);
+        text-shadow: 0 0 60px var(--red-glow);
+        letter-spacing: -0.02em;
+        font-variant-numeric: tabular-nums;
+      }
+      .hero-label {
+        font-family: "Anton", sans-serif;
+        font-size: 32px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        margin-top: 12px;
+      }
+
+      .stats-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0;
+        max-width: 1180px;
+        margin: 0 auto;
+        width: 100%;
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+      }
+
+      .stat {
+        padding: 28px 22px;
+        text-align: center;
+        border-right: 1px solid var(--line);
+        position: relative;
+      }
+      .stat:last-child { border-right: none; }
+
+      .stat-num {
+        font-family: "Anton", sans-serif;
+        font-size: 56px;
+        line-height: 1;
+        color: var(--ink);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 0.02em;
+      }
+      .stat-num em {
+        font-style: normal;
+        color: var(--red);
+        font-size: 28px;
+      }
+      .stat-label {
+        font-size: 9px;
+        letter-spacing: 0.28em;
+        color: var(--ink-dim);
+        text-transform: uppercase;
+        margin-top: 12px;
+      }
+      .stat-bar {
+        height: 2px;
+        margin: 14px auto 0;
+        max-width: 70%;
+        background: var(--line);
+        position: relative;
+      }
+      .stat-bar::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        background: var(--red);
+        box-shadow: 0 0 8px var(--red-glow);
+      }
+      .stat-bar.b1::after { width: 86%; }
+      .stat-bar.b2::after { width: 64%; }
+      .stat-bar.b3::after { width: 92%; }
+      .stat-bar.b4::after { width: 38%; }
+
+      .footer {
+        margin-top: auto;
+        padding-top: 32px;
+        text-align: center;
+        font-size: 10px;
+        letter-spacing: 0.32em;
+        color: var(--ink-dim);
+        text-transform: uppercase;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="brand">Auto<em>·</em>Skip</div>
+      <div class="channel-strip">
+        <span class="live-dot"></span>
+        <span>4 Channels Live</span>
+        <span style="color: var(--line)">·</span>
+        <span>v1.0</span>
+      </div>
+    </header>
+
+    <div class="hero">
+      <div class="hero-eyebrow">Total Skipped This Year</div>
+      <div class="hero-num">12,847</div>
+      <div class="hero-label">Buttons you didn't click</div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat">
+        <div class="stat-num">5,210</div>
+        <div class="stat-label">Intros</div>
+        <div class="stat-bar b1"></div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">3,420</div>
+        <div class="stat-label">Recaps</div>
+        <div class="stat-bar b2"></div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">3,896</div>
+        <div class="stat-label">Next Episode</div>
+        <div class="stat-bar b3"></div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">321</div>
+        <div class="stat-label">Still Watching</div>
+        <div class="stat-bar b4"></div>
+      </div>
+    </div>
+
+    <div class="footer">Time saved · 71 hours · 23 minutes</div>
+  </body>
+</html>

@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Auto-Skip — Preview</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0a0a0a;
+        --bg-raised: #141414;
+        --line: #2a2a2a;
+        --line-dim: #1a1a1a;
+        --ink: #f4f1ea;
+        --ink-dim: #6a6a6a;
+        --ink-mid: #9a9a9a;
+        --red: #e50914;
+        --red-glow: rgba(229, 9, 20, 0.45);
+        --amber: #ffb000;
+      }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+
+      body {
+        font-family: "JetBrains Mono", ui-monospace, monospace;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 20% 20%, rgba(229, 9, 20, 0.18), transparent 45%),
+          radial-gradient(circle at 80% 80%, rgba(229, 9, 20, 0.12), transparent 50%),
+          linear-gradient(135deg, #1a0608 0%, #050505 50%, #0a0102 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        position: relative;
+      }
+
+      /* stage backdrop grain */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0.08;
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='9'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.9 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+        mix-blend-mode: overlay;
+        z-index: 1;
+      }
+
+      /* stage scan lines */
+      body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background: repeating-linear-gradient(
+          to bottom,
+          transparent 0,
+          transparent 3px,
+          rgba(255, 255, 255, 0.015) 3px,
+          rgba(255, 255, 255, 0.015) 4px
+        );
+        z-index: 2;
+      }
+
+      .stage {
+        position: relative;
+        z-index: 3;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        gap: 88px;
+        padding: 60px;
+        max-width: 1280px;
+      }
+
+      .pitch {
+        max-width: 540px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 11px;
+        letter-spacing: 0.32em;
+        font-weight: 700;
+        color: var(--ink-mid);
+        text-transform: uppercase;
+        margin-bottom: 28px;
+      }
+
+      .eyebrow::before {
+        content: "";
+        width: 36px;
+        height: 1px;
+        background: var(--red);
+      }
+
+      .pitch h2 {
+        font-family: "Anton", sans-serif;
+        font-weight: 400;
+        font-size: 88px;
+        line-height: 0.92;
+        letter-spacing: 0.01em;
+        text-transform: uppercase;
+        color: var(--ink);
+        margin-bottom: 24px;
+      }
+
+      .pitch h2 em {
+        font-style: normal;
+        color: var(--red);
+        text-shadow: 0 0 30px var(--red-glow);
+      }
+
+      .pitch p {
+        font-size: 15px;
+        line-height: 1.65;
+        color: var(--ink-mid);
+        max-width: 460px;
+        margin-bottom: 32px;
+      }
+
+      .ticks {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .tick {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        color: var(--ink);
+        text-transform: uppercase;
+      }
+
+      .tick::before {
+        content: "→";
+        color: var(--red);
+        font-family: "Anton", sans-serif;
+        font-size: 18px;
+        line-height: 1;
+      }
+
+      /* ==== popup (mirrors popup.html exactly) ==== */
+      .popup {
+        width: 300px;
+        background: var(--bg);
+        position: relative;
+        overflow: hidden;
+        font-size: 11px;
+        letter-spacing: 0.02em;
+        border-radius: 4px;
+        box-shadow:
+          0 50px 120px rgba(0, 0, 0, 0.7),
+          0 20px 50px rgba(229, 9, 20, 0.18),
+          0 0 0 1px rgba(255, 255, 255, 0.04);
+      }
+
+      .popup::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0.06;
+        mix-blend-mode: overlay;
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='4'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1.1 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+        z-index: 100;
+      }
+
+      .popup::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: repeating-linear-gradient(
+          to bottom,
+          transparent 0,
+          transparent 2px,
+          rgba(255, 255, 255, 0.012) 2px,
+          rgba(255, 255, 255, 0.012) 3px
+        );
+        z-index: 101;
+      }
+
+      .popup header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 16px 18px 12px;
+        border-bottom: 1px solid var(--line);
+        background:
+          radial-gradient(circle at 0% 50%, rgba(229, 9, 20, 0.08), transparent 40%),
+          linear-gradient(to bottom, var(--bg-raised), var(--bg));
+      }
+
+      .rec {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 9px;
+        letter-spacing: 0.18em;
+        color: var(--ink-mid);
+        font-weight: 700;
+      }
+
+      .rec-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--red);
+        box-shadow: 0 0 8px var(--red-glow);
+        animation: pulse 1.4s ease-in-out infinite;
+      }
+
+      @keyframes pulse {
+        0%, 100% { opacity: 1; box-shadow: 0 0 10px var(--red-glow); }
+        50% { opacity: 0.35; box-shadow: 0 0 2px transparent; }
+      }
+
+      .popup h1 {
+        font-family: "Anton", "Impact", sans-serif;
+        font-weight: 400;
+        font-size: 26px;
+        letter-spacing: 0.04em;
+        line-height: 0.95;
+        margin-left: auto;
+        text-transform: uppercase;
+      }
+
+      .popup h1 .accent { color: var(--red); }
+
+      .section-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 14px 18px 10px;
+        font-size: 9px;
+        letter-spacing: 0.22em;
+        color: var(--ink-dim);
+        text-transform: uppercase;
+      }
+
+      .section-label::before, .section-label::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: var(--line);
+      }
+
+      .channels { padding: 0 18px 14px; }
+
+      .channel {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        gap: 4px 12px;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--line-dim);
+        position: relative;
+      }
+
+      .channel:last-child { border-bottom: none; }
+
+      .channel::before {
+        content: "";
+        position: absolute;
+        left: -18px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: var(--red);
+      }
+
+      .channel.off::before { display: none; }
+
+      .channel-name {
+        font-family: "Anton", sans-serif;
+        font-size: 16px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--ink);
+        line-height: 1;
+      }
+
+      .channel.off .channel-name { color: var(--ink-mid); }
+
+      .channel-desc {
+        grid-column: 1;
+        font-size: 10px;
+        color: var(--ink-dim);
+        letter-spacing: 0.04em;
+      }
+
+      .switch {
+        grid-row: 1 / span 2;
+        grid-column: 2;
+        position: relative;
+        width: 46px;
+        height: 24px;
+        background: #050505;
+        border: 1px solid var(--line);
+        border-radius: 2px;
+        flex-shrink: 0;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.04),
+          inset 0 -1px 0 rgba(0, 0, 0, 0.6);
+      }
+
+      .switch-knob {
+        position: absolute;
+        top: 2px;
+        left: 24px;
+        width: 20px;
+        height: 18px;
+        background: linear-gradient(to bottom, #ff1f2a, #b50611);
+        border: 1px solid #7a0309;
+        border-radius: 1px;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.18),
+          0 0 10px var(--red-glow),
+          0 1px 2px rgba(0, 0, 0, 0.6);
+      }
+
+      .switch-knob::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 8px;
+        height: 1px;
+        background: rgba(255, 255, 255, 0.4);
+        transform: translate(-50%, -50%);
+      }
+
+      .switch-track-on, .switch-track-off {
+        position: absolute;
+        top: 50%;
+        font-size: 7px;
+        letter-spacing: 0.1em;
+        font-weight: 700;
+        transform: translateY(-50%);
+      }
+
+      .switch-track-on { left: 6px; color: var(--red); }
+      .switch-track-off { right: 6px; color: var(--ink-dim); display: none; }
+
+      /* OFF state for one row to show variety */
+      .channel.off .switch-knob {
+        left: 2px;
+        background: linear-gradient(to bottom, #2a2a2a, #111);
+        border-color: #333;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.08),
+          0 1px 2px rgba(0, 0, 0, 0.6);
+      }
+      .channel.off .switch-knob::after { background: #555; }
+      .channel.off .switch-track-on { display: none; }
+      .channel.off .switch-track-off { display: block; }
+
+      .counter {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin: 0 18px 14px;
+        padding: 10px 12px;
+        background: linear-gradient(to bottom, #050505, #0c0c0c);
+        border: 1px solid var(--line);
+        border-radius: 2px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .counter::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: rgba(255, 255, 255, 0.04);
+        pointer-events: none;
+      }
+
+      .counter-label {
+        font-size: 9px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: var(--ink-dim);
+      }
+
+      .counter-value {
+        font-family: "Anton", sans-serif;
+        font-size: 26px;
+        line-height: 1;
+        color: var(--red);
+        text-shadow: 0 0 12px var(--red-glow);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 0.04em;
+      }
+
+      .popup footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 18px;
+        border-top: 1px solid var(--line);
+        background: linear-gradient(to top, var(--bg-raised), var(--bg));
+        font-size: 9px;
+        letter-spacing: 0.18em;
+        color: var(--ink-dim);
+        text-transform: uppercase;
+      }
+
+      .popup footer .status {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--ink-mid);
+      }
+
+      .status-dot {
+        width: 5px;
+        height: 5px;
+        background: var(--amber);
+        border-radius: 50%;
+        box-shadow: 0 0 6px var(--amber);
+      }
+
+      /* control bar (toggle preview variants) */
+      .controls {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 99;
+        display: flex;
+        gap: 8px;
+        padding: 8px;
+        background: rgba(0, 0, 0, 0.6);
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        backdrop-filter: blur(8px);
+      }
+
+      .controls button {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 10px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        padding: 6px 10px;
+        background: transparent;
+        border: 1px solid var(--line);
+        color: var(--ink-mid);
+        cursor: pointer;
+      }
+      .controls button:hover { color: var(--red); border-color: var(--red); }
+
+      @media (max-width: 900px) {
+        .stage { grid-template-columns: 1fr; gap: 40px; padding: 40px 24px; }
+        .pitch h2 { font-size: 56px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="stage">
+      <div class="pitch">
+        <div class="eyebrow">Netflix Companion · v1.0</div>
+        <h2>Stop clicking.<br />Start <em>watching.</em></h2>
+        <p>
+          Auto-Skip silently presses the buttons you'd press anyway —
+          intros, recaps, next-episode prompts, and the dreaded
+          "are you still watching" — so your show never breaks rhythm.
+        </p>
+        <div class="ticks">
+          <div class="tick">Skip Intro · Recap · Next Ep</div>
+          <div class="tick">Auto-confirm "still watching"</div>
+          <div class="tick">Per-channel toggles</div>
+          <div class="tick">Skip counter on the toolbar</div>
+        </div>
+      </div>
+
+      <div class="popup">
+        <header>
+          <div class="rec">
+            <span class="rec-dot"></span>
+            <span>WATCHING</span>
+          </div>
+          <h1>Auto<span class="accent">·</span>Skip</h1>
+        </header>
+
+        <div class="section-label">Channels</div>
+
+        <div class="channels">
+          <div class="channel">
+            <span class="channel-name">Intro</span>
+            <span class="channel-desc">Skip opening sequence</span>
+            <span class="switch">
+              <span class="switch-track-on">ON</span>
+              <span class="switch-track-off">OFF</span>
+              <span class="switch-knob"></span>
+            </span>
+          </div>
+
+          <div class="channel">
+            <span class="channel-name">Recap</span>
+            <span class="channel-desc">Skip "previously on"</span>
+            <span class="switch">
+              <span class="switch-track-on">ON</span>
+              <span class="switch-track-off">OFF</span>
+              <span class="switch-knob"></span>
+            </span>
+          </div>
+
+          <div class="channel off">
+            <span class="channel-name">Next Ep</span>
+            <span class="channel-desc">Auto-advance episodes</span>
+            <span class="switch">
+              <span class="switch-track-on">ON</span>
+              <span class="switch-track-off">OFF</span>
+              <span class="switch-knob"></span>
+            </span>
+          </div>
+
+          <div class="channel">
+            <span class="channel-name">Still Watching</span>
+            <span class="channel-desc">Dismiss "are you still watching"</span>
+            <span class="switch">
+              <span class="switch-track-on">ON</span>
+              <span class="switch-track-off">OFF</span>
+              <span class="switch-knob"></span>
+            </span>
+          </div>
+        </div>
+
+        <div class="counter">
+          <div class="counter-label">Total Skipped</div>
+          <div class="counter-value" id="counterValue">1,247</div>
+        </div>
+
+        <footer>
+          <span>v1.0.0</span>
+          <span class="status">
+            <span class="status-dot"></span>
+            <span>3/4 Live</span>
+          </span>
+        </footer>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button data-count="0">Empty</button>
+      <button data-count="42">42</button>
+      <button data-count="1247">1,247</button>
+      <button data-count="9999">9,999</button>
+    </div>
+
+    <script>
+      // tiny counter switcher for screenshot variety — no chrome.* APIs
+      const value = document.getElementById("counterValue");
+      document.querySelectorAll(".controls button").forEach((b) => {
+        b.addEventListener("click", () => {
+          const n = Number(b.dataset.count);
+          value.textContent = n.toLocaleString("en-US");
+        });
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Auto-Skip — In Action</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0a0a0a;
+        --bg-raised: #141414;
+        --line: #2a2a2a;
+        --line-dim: #1a1a1a;
+        --ink: #f4f1ea;
+        --ink-dim: #6a6a6a;
+        --ink-mid: #9a9a9a;
+        --red: #e50914;
+        --red-glow: rgba(229, 9, 20, 0.45);
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body { width: 100%; height: 100%; overflow: hidden; }
+      body {
+        font-family: "JetBrains Mono", ui-monospace, monospace;
+        color: var(--ink);
+        background: #050505;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 40px;
+      }
+
+      .title {
+        font-family: "Anton", sans-serif;
+        font-size: 60px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        text-align: center;
+        margin-bottom: 8px;
+      }
+      .title em {
+        font-style: normal;
+        color: var(--red);
+        text-shadow: 0 0 30px var(--red-glow);
+      }
+      .subtitle {
+        font-size: 12px;
+        letter-spacing: 0.32em;
+        text-transform: uppercase;
+        color: var(--ink-dim);
+        margin-bottom: 50px;
+        text-align: center;
+      }
+
+      .splits {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        gap: 32px;
+        align-items: center;
+        width: 100%;
+        max-width: 1180px;
+      }
+
+      .split {
+        position: relative;
+        aspect-ratio: 16 / 10;
+        background: #000;
+        border-radius: 6px;
+        overflow: hidden;
+        box-shadow:
+          0 30px 80px rgba(0, 0, 0, 0.7),
+          0 0 0 1px rgba(255, 255, 255, 0.05);
+      }
+
+      .stamp {
+        position: absolute;
+        top: 16px;
+        left: 16px;
+        z-index: 5;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 10px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: var(--ink);
+        background: rgba(0, 0, 0, 0.7);
+        padding: 6px 10px;
+        border-radius: 2px;
+      }
+      .stamp.before .dot { background: #888; }
+      .stamp.after .dot { background: var(--red); box-shadow: 0 0 8px var(--red-glow); }
+      .stamp .dot { width: 6px; height: 6px; border-radius: 50%; }
+
+      /* faux netflix player */
+      .player {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(ellipse at 30% 30%, #2a1a1a 0%, transparent 60%),
+          radial-gradient(ellipse at 70% 70%, #1a1a2a 0%, transparent 60%),
+          linear-gradient(135deg, #0d0d0d 0%, #050505 100%);
+      }
+
+      .player::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence baseFrequency='0.7'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.4 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+        opacity: 0.05;
+        mix-blend-mode: overlay;
+      }
+
+      .scene-title {
+        position: absolute;
+        bottom: 80px;
+        left: 30px;
+        font-family: "Anton", sans-serif;
+        font-size: 36px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        line-height: 0.95;
+      }
+      .scene-meta {
+        position: absolute;
+        bottom: 56px;
+        left: 30px;
+        font-size: 10px;
+        letter-spacing: 0.18em;
+        color: var(--ink-mid);
+        text-transform: uppercase;
+      }
+
+      /* Skip Intro button — Netflix style */
+      .skip-btn {
+        position: absolute;
+        bottom: 30px;
+        right: 30px;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 13px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #fff;
+        background: rgba(0, 0, 0, 0.55);
+        border: 1px solid rgba(255, 255, 255, 0.7);
+        padding: 12px 24px;
+        backdrop-filter: blur(4px);
+      }
+
+      /* "after" — auto-skipped state */
+      .skipped-flash {
+        position: absolute;
+        bottom: 30px;
+        right: 30px;
+        font-size: 11px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: var(--red);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        text-shadow: 0 0 10px var(--red-glow);
+      }
+      .skipped-flash::before {
+        content: "✓";
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      /* progress bar at bottom of player */
+      .progress {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: rgba(255, 255, 255, 0.15);
+      }
+      .progress::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        background: var(--red);
+      }
+      .before .progress::after { width: 8%; }
+      .after .progress::after { width: 24%; }
+
+      /* arrow between */
+      .arrow {
+        font-family: "Anton", sans-serif;
+        font-size: 80px;
+        color: var(--red);
+        text-shadow: 0 0 30px var(--red-glow);
+        line-height: 1;
+        animation: arrowBounce 2s ease-in-out infinite;
+      }
+      @keyframes arrowBounce {
+        0%, 100% { transform: translateX(0); }
+        50% { transform: translateX(8px); }
+      }
+
+      .caption {
+        text-align: center;
+        margin-top: 14px;
+        font-size: 11px;
+        letter-spacing: 0.2em;
+        color: var(--ink-dim);
+        text-transform: uppercase;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="title">From <em>Click</em> to <em>Watch.</em></div>
+    <div class="subtitle">No more chasing the skip button</div>
+
+    <div class="splits">
+      <div>
+        <div class="split before">
+          <div class="player">
+            <div class="stamp before"><span class="dot"></span><span>Before</span></div>
+            <div class="scene-title">Stranger Things<br />Episode 4</div>
+            <div class="scene-meta">S4 · Intro · 0:08 / 1:32</div>
+            <div class="skip-btn">Skip Intro</div>
+            <div class="progress"></div>
+          </div>
+        </div>
+        <div class="caption">You click. Every. Single. Time.</div>
+      </div>
+
+      <div class="arrow">→</div>
+
+      <div>
+        <div class="split after">
+          <div class="player">
+            <div class="stamp after"><span class="dot"></span><span>After</span></div>
+            <div class="scene-title">Stranger Things<br />Episode 4</div>
+            <div class="scene-meta">S4 · Cold Open · 0:24 / 4:18</div>
+            <div class="skipped-flash">Skipped automatically</div>
+            <div class="progress"></div>
+          </div>
+        </div>
+        <div class="caption">Auto-Skip clicked it for you</div>
+      </div>
+    </div>
+  </body>
+</html>
