@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Netflix Companion — Launch</title>
+    <title>Netflix Companion — Launch v2</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -20,138 +20,110 @@
       }
       * { margin: 0; padding: 0; box-sizing: border-box; }
       html, body { width: 1280px; height: 800px; overflow: hidden; background: #000; }
-      body {
-        font-family: "JetBrains Mono", monospace;
-        color: var(--ink);
-        position: relative;
-      }
+      body { font-family: "JetBrains Mono", monospace; color: var(--ink); position: relative; }
 
       #stage {
-        position: absolute;
-        inset: 0;
+        position: absolute; inset: 0; overflow: hidden;
         background:
-          radial-gradient(circle at 50% 38%, rgba(229,9,20,0.16), transparent 55%),
-          linear-gradient(160deg, #160406 0%, #050505 55%, #0a0102 100%);
-        overflow: hidden;
+          radial-gradient(circle at 50% 40%, rgba(229,9,20,0.16), transparent 56%),
+          linear-gradient(160deg, #170406 0%, #050505 55%, #0a0102 100%);
       }
-
-      /* film grain + scanlines overlay (always on) */
+      /* moving vignette glow */
+      #glow {
+        position: absolute; width: 1200px; height: 1200px; left: 50%; top: 40%;
+        transform: translate(-50%,-50%); pointer-events: none; z-index: 1;
+        background: radial-gradient(circle, rgba(229,9,20,0.22), transparent 60%);
+        filter: blur(20px);
+      }
       #stage::before {
-        content: "";
-        position: absolute; inset: 0; pointer-events: none; z-index: 60;
+        content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 60;
         opacity: 0.07; mix-blend-mode: overlay;
         background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' seed='7'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.9 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
       }
       #stage::after {
-        content: "";
-        position: absolute; inset: 0; pointer-events: none; z-index: 61;
+        content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 61;
         background: repeating-linear-gradient(to bottom, transparent 0, transparent 3px, rgba(255,255,255,0.018) 3px, rgba(255,255,255,0.018) 4px);
       }
+      /* cinematic letterbox bars */
+      .bar-top, .bar-bot { position: absolute; left: 0; right: 0; height: 0; background: #000; z-index: 55; }
+      .bar-top { top: 0; } .bar-bot { bottom: 0; }
 
-      .layer { position: absolute; inset: 0; }
+      .layer { position: absolute; inset: 0; z-index: 5; }
 
-      /* ---- scene 1: logo reveal ---- */
-      #rec {
-        position: absolute; top: 80px; left: 50%; transform: translateX(-50%);
-        display: flex; align-items: center; gap: 12px;
-        font-size: 16px; letter-spacing: 0.4em; font-weight: 700; color: var(--ink-mid);
-      }
-      #recDot { width: 12px; height: 12px; border-radius: 50%; background: var(--red); box-shadow: 0 0 16px var(--red-glow); }
+      /* Scene 1 */
+      #rec { position: absolute; top: 96px; left: 50%; transform: translateX(-50%);
+        display: flex; align-items: center; gap: 12px; font-size: 15px; letter-spacing: 0.42em; font-weight: 700; color: var(--ink-mid); }
+      #recDot { width: 11px; height: 11px; border-radius: 50%; background: var(--red); box-shadow: 0 0 16px var(--red-glow); }
+      #wordmark { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+        font-family: "Anton", sans-serif; font-size: 158px; letter-spacing: 0.02em; text-transform: uppercase; white-space: nowrap; }
+      #wordmark .dot { color: var(--red); text-shadow: 0 0 44px var(--red-glow); }
+      #subWord { position: absolute; top: calc(50% + 105px); left: 50%; transform: translateX(-50%);
+        font-size: 17px; letter-spacing: 0.5em; color: var(--ink-dim); text-transform: uppercase; }
+      #sweep { position: absolute; top: 0; bottom: 0; width: 36%; z-index: 6;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent); }
 
-      #wordmark {
-        position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
-        font-family: "Anton", sans-serif; font-size: 150px; letter-spacing: 0.02em;
-        text-transform: uppercase; white-space: nowrap;
-      }
-      #wordmark .dot { color: var(--red); text-shadow: 0 0 40px var(--red-glow); }
-
-      #sweep {
-        position: absolute; top: 0; bottom: 0; width: 40%;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.10), transparent);
-      }
-
-      /* ---- scene 2: player bar mock ---- */
-      #bar {
-        position: absolute; left: 50%; bottom: 150px; transform: translateX(-50%);
-        display: flex; align-items: center; gap: 22px;
-        padding: 22px 30px; border-radius: 12px;
-        background: rgba(8,8,8,0.85); border: 1px solid #222;
-        box-shadow: 0 30px 80px rgba(0,0,0,0.6);
-      }
-      .btn {
-        width: 46px; height: 46px; display: flex; align-items: center; justify-content: center;
-        color: var(--ink); position: relative;
-      }
+      /* Scene 2 */
+      #bar { position: absolute; left: 50%; bottom: 160px; transform: translateX(-50%);
+        display: flex; align-items: center; gap: 20px; padding: 22px 30px; border-radius: 14px;
+        background: rgba(8,8,8,0.86); border: 1px solid #242424; box-shadow: 0 30px 90px rgba(0,0,0,0.65); }
+      .btn { width: 46px; height: 46px; display: flex; align-items: center; justify-content: center; color: var(--ink); position: relative; }
       .btn svg { width: 40px; height: 40px; fill: currentColor; }
-      .btn.companion { color: #fff; }
-      .btn .badge {
-        position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%);
-        font-size: 11px; font-weight: 700; color: #fff;
-      }
+      .btn .badge { position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: 700; color: #fff; }
       .btn.glow { color: #fff; }
-      .btn.glow::after {
-        content: ""; position: absolute; inset: -6px; border-radius: 10px;
-        box-shadow: 0 0 0 2px var(--red), 0 0 22px var(--red-glow);
-      }
-      #barLabel {
-        position: absolute; left: 50%; bottom: 250px; transform: translateX(-50%);
-        font-size: 15px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--red); font-weight: 700;
-      }
+      .btn.glow::after { content: ""; position: absolute; inset: -6px; border-radius: 10px; box-shadow: 0 0 0 2px var(--red), 0 0 24px var(--red-glow); }
+      #barLabel { position: absolute; left: 50%; bottom: 262px; transform: translateX(-50%);
+        font-size: 15px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--red); font-weight: 700; }
 
-      /* ---- scene 3: feature callouts ---- */
-      #features { display: flex; align-items: center; justify-content: center; }
-      #featureText {
-        font-family: "Anton", sans-serif; text-transform: uppercase; text-align: center;
-        line-height: 0.92; letter-spacing: 0.02em;
-      }
-      #featureText .big { font-size: 130px; }
-      #featureText .accent { color: var(--red); text-shadow: 0 0 36px var(--red-glow); }
-      #featureText .sub { display:block; font-family: "JetBrains Mono", monospace; font-size: 20px; letter-spacing: 0.32em; color: var(--ink-mid); margin-top: 22px; font-weight: 700; }
+      /* Scene 3 */
+      #featureText { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+        font-family: "Anton", sans-serif; text-transform: uppercase; text-align: center; line-height: 0.9; letter-spacing: 0.02em; }
+      #featureText .big { font-size: 138px; display: block; }
+      #featureText .accent { color: var(--red); text-shadow: 0 0 40px var(--red-glow); }
+      #featureText .sub { display: block; font-family: "JetBrains Mono", monospace; font-size: 19px; letter-spacing: 0.34em; color: var(--ink-mid); margin-top: 26px; font-weight: 700; }
 
-      /* ---- scene 4: closing lockup ---- */
-      #closeWrap { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px; }
-      #closeMark { font-family: "Anton", sans-serif; font-size: 120px; text-transform: uppercase; letter-spacing: 0.02em; }
-      #closeMark .dot { color: var(--red); text-shadow: 0 0 40px var(--red-glow); }
-      #tagline { font-size: 24px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink-mid); }
-      #ver { font-size: 14px; letter-spacing: 0.4em; color: var(--ink-dim); }
-      #closeRule { width: 0; height: 2px; background: var(--red); box-shadow: 0 0 12px var(--red-glow); }
+      /* Scene 4 */
+      #closeMark { position: absolute; top: 42%; left: 50%; transform: translate(-50%,-50%);
+        font-family: "Anton", sans-serif; font-size: 124px; text-transform: uppercase; letter-spacing: 0.02em; }
+      #closeMark .dot { color: var(--red); text-shadow: 0 0 44px var(--red-glow); }
+      #closeRule { position: absolute; top: calc(42% + 92px); left: 50%; transform: translateX(-50%);
+        width: 0; height: 2px; background: var(--red); box-shadow: 0 0 14px var(--red-glow); }
+      #tagline { position: absolute; top: calc(42% + 128px); left: 50%; transform: translateX(-50%);
+        font-size: 23px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--ink-mid); white-space: nowrap; }
+      #ver { position: absolute; top: calc(42% + 178px); left: 50%; transform: translateX(-50%);
+        font-size: 13px; letter-spacing: 0.42em; color: var(--ink-dim); white-space: nowrap; }
     </style>
   </head>
   <body>
     <div id="stage">
-      <!-- Scene 1 -->
+      <div id="glow"></div>
+      <div class="bar-top"></div>
+      <div class="bar-bot"></div>
+
       <div class="layer" id="scene1">
-        <div id="rec"><span id="recDot"></span><span id="recText">WATCHING</span></div>
+        <div id="rec"><span id="recDot"></span><span>WATCHING</span></div>
         <div id="wordmark">Companion<span class="dot">.</span></div>
+        <div id="subWord">FOR NETFLIX</div>
         <div id="sweep"></div>
       </div>
 
-      <!-- Scene 2 -->
       <div class="layer" id="scene2">
         <div id="barLabel">Right inside the player</div>
         <div id="bar"></div>
       </div>
 
-      <!-- Scene 3 -->
       <div class="layer" id="scene3">
-        <div id="features" class="layer">
-          <div id="featureText"></div>
-        </div>
+        <div id="featureText"></div>
       </div>
 
-      <!-- Scene 4 -->
       <div class="layer" id="scene4">
-        <div id="closeWrap" class="layer">
-          <div id="closeMark">Companion<span class="dot">.</span></div>
-          <div id="closeRule"></div>
-          <div id="tagline">Your Netflix, supercharged</div>
-          <div id="ver">v1.2.0 · CHROME EXTENSION</div>
-        </div>
+        <div id="closeMark">Companion<span class="dot">.</span></div>
+        <div id="closeRule"></div>
+        <div id="tagline">Your Netflix, supercharged</div>
+        <div id="ver">v1.2.0 · CHROME EXTENSION</div>
       </div>
     </div>
 
     <script>
-      // ---------- SVG icons for the mock player bar ----------
       const ICON = {
         play: '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',
         back10: '<svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg>',
@@ -161,149 +133,132 @@
         pip: '<svg viewBox="0 0 24 24"><path d="M19 7h-8v6h8V7zm2-4H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.11-.9-2-2-2zm0 16.01H3V4.98h18v14.03z"/></svg>',
         volume: '<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4z"/></svg>',
       };
-      // Bar buttons: native + our injected ones (companion=true) with optional badge / glow scene.
       const BAR = [
-        { icon: "play" },
-        { icon: "back10" },
-        { icon: "fwd10" },
-        { icon: "seekBack", companion: true, badge: "5" },
-        { icon: "seek", companion: true, badge: "5" },
-        { icon: "seekBack", companion: true, badge: "90" },
-        { icon: "seek", companion: true, badge: "90" },
-        { icon: "pip", companion: true },
-        { icon: "volume" },
+        { icon: "play" }, { icon: "back10" }, { icon: "fwd10" },
+        { icon: "seekBack", companion: true, badge: "5" }, { icon: "seek", companion: true, badge: "5" },
+        { icon: "seekBack", companion: true, badge: "90" }, { icon: "seek", companion: true, badge: "90" },
+        { icon: "pip", companion: true }, { icon: "volume" },
       ];
       const barEl = document.getElementById("bar");
-      BAR.forEach((b, i) => {
+      BAR.forEach((b) => {
         const d = document.createElement("div");
         d.className = "btn" + (b.companion ? " companion" : "");
-        d.dataset.i = i;
         d.dataset.companion = b.companion ? "1" : "0";
         d.innerHTML = ICON[b.icon] + (b.badge ? '<span class="badge">' + b.badge + "</span>" : "");
         barEl.appendChild(d);
       });
       const barBtns = Array.from(barEl.children);
 
-      // ---------- feature callout sequence (scene 3) ----------
       const FEATURES = [
         { big: "AUTO", accent: "SKIP", sub: "INTRO · RECAP · NEXT EP" },
         { big: "5s · 90s", accent: "SEEK", sub: "JUMP EXACTLY WHERE YOU WANT" },
-        { big: "SPEED", accent: "0.1–4×", sub: "SLIDER + < > SHORTCUTS" },
-        { big: "VOLUME", accent: "500%", sub: "BOOST + NORMALIZER" },
+        { big: "SPEED", accent: "0.1–4×", sub: "FINE CONTROL, ANY SCENE" },
+        { big: "VOLUME", accent: "500%", sub: "BOOST + LOUDNESS NORMALIZER" },
+        { big: "ONE", accent: "TAP", sub: "PIP · FRAME-STEP · SHORTCUTS" },
       ];
 
-      // ---------- helpers ----------
-      const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
-      const ease = (t) => t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2; // easeInOutCubic
-      const easeOut = (t) => 1 - Math.pow(1 - t, 3);
-      function lerp(a, b, t) { return a + (b - a) * t; }
-      function show(id, on) { document.getElementById(id).style.display = on ? "block" : "none"; }
-      function setOpacity(el, v) { el.style.opacity = String(clamp(v, 0, 1)); }
+      const clamp = (v,a,b)=>Math.min(b,Math.max(a,v));
+      const easeOut = (t)=>1-Math.pow(1-t,3);
+      const easeInOut = (t)=>t<0.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+      const lerp=(a,b,t)=>a+(b-a)*t;
+      const show=(id,on)=>document.getElementById(id).style.display=on?"block":"none";
+      const op=(el,v)=>el.style.opacity=String(clamp(v,0,1));
 
-      const wordmark = document.getElementById("wordmark");
-      const sweep = document.getElementById("sweep");
-      const recDot = document.getElementById("recDot");
-      const recText = document.getElementById("recText");
-      const featureText = document.getElementById("featureText");
-      const barLabel = document.getElementById("barLabel");
-      const closeRule = document.getElementById("closeRule");
-      const closeMark = document.getElementById("closeMark");
-      const tagline = document.getElementById("tagline");
-      const ver = document.getElementById("ver");
+      const stage=document.getElementById("stage");
+      const glow=document.getElementById("glow");
+      const barTop=document.querySelector(".bar-top");
+      const barBot=document.querySelector(".bar-bot");
+      const wordmark=document.getElementById("wordmark");
+      const subWord=document.getElementById("subWord");
+      const sweep=document.getElementById("sweep");
+      const recDot=document.getElementById("recDot");
+      const recBox=document.getElementById("rec");
+      const featureText=document.getElementById("featureText");
+      const barLabel=document.getElementById("barLabel");
+      const closeMark=document.getElementById("closeMark");
+      const closeRule=document.getElementById("closeRule");
+      const tagline=document.getElementById("tagline");
+      const ver=document.getElementById("ver");
 
-      // ---------- master timeline: setT(seconds) ----------
-      // Total = 11s. Scenes: 1 [0,2.6) logo, 2 [2.6,5.2) bar, 3 [5.2,8.4) features, 4 [8.4,11] close.
+      // Scenes: 1 [0,2.4) logo · 2 [2.4,4.8) bar · 3 [4.8,8.6) features(5×0.76) · 4 [8.6,11] close
       function setT(t) {
-        const s1 = t < 2.6, s2 = t >= 2.6 && t < 5.2, s3 = t >= 5.2 && t < 8.4, s4 = t >= 8.4;
-        show("scene1", s1); show("scene2", s2); show("scene3", s3); show("scene4", s4);
+        const s1=t<2.4, s2=t>=2.4&&t<4.8, s3=t>=4.8&&t<8.6, s4=t>=8.6;
+        show("scene1",s1); show("scene2",s2); show("scene3",s3); show("scene4",s4);
 
-        // REC dot pulse (continuous, deterministic on t)
-        const pulse = 0.5 + 0.5 * Math.sin(t * Math.PI * 2 * 1.1);
-        recDot.style.opacity = String(0.35 + 0.65 * pulse);
-        recDot.style.boxShadow = `0 0 ${6 + 14 * pulse}px var(--red-glow)`;
+        // global glow drift + breathing
+        const breathe = 0.85 + 0.15*Math.sin(t*Math.PI*2*0.25);
+        glow.style.opacity = String(0.7*breathe);
+        glow.style.left = `${50 + 6*Math.sin(t*0.7)}%`;
+        glow.style.top = `${40 + 4*Math.cos(t*0.5)}%`;
+
+        // letterbox bars ease in over first 0.6s, out over last 0.5s
+        const lb = lerp(0, 56, easeOut(clamp(t/0.6,0,1))) * clamp((11 - t)/0.5,0,1);
+        barTop.style.height = `${lb}px`; barBot.style.height = `${lb}px`;
+
+        // rec dot pulse
+        const pulse=0.5+0.5*Math.sin(t*Math.PI*2*1.1);
+        recDot.style.opacity=String(0.35+0.65*pulse);
+        recDot.style.boxShadow=`0 0 ${6+14*pulse}px var(--red-glow)`;
 
         if (s1) {
-          // wordmark scales up + fades in; sweep crosses once; rec fades in then out
-          const a = clamp(t / 0.9, 0, 1);
-          const scale = lerp(0.82, 1, easeOut(a));
-          setOpacity(wordmark, a);
-          wordmark.style.transform = `translate(-50%,-50%) scale(${scale.toFixed(4)})`;
-          const recA = clamp((t - 0.2) / 0.6, 0, 1) * clamp((2.4 - t) / 0.5, 0, 1);
-          setOpacity(document.getElementById("rec"), recA);
-          // sweep travels left->right between 0.6s and 1.8s
-          const sp = clamp((t - 0.6) / 1.2, 0, 1);
-          sweep.style.left = `${lerp(-40, 110, sp)}%`;
-          setOpacity(sweep, sp > 0 && sp < 1 ? 1 : 0);
-          // gentle fade-out of whole scene near the end
-          document.getElementById("scene1").style.opacity = String(clamp((2.6 - t) / 0.35, 0, 1));
+          const a=clamp(t/0.85,0,1);
+          op(wordmark,a);
+          wordmark.style.transform=`translate(-50%,-50%) scale(${lerp(0.8,1,easeOut(a)).toFixed(4)})`;
+          wordmark.style.filter=`blur(${lerp(8,0,easeOut(a)).toFixed(2)}px)`;
+          op(subWord, clamp((t-0.7)/0.6,0,1));
+          subWord.style.letterSpacing = `${lerp(0.9,0.5,easeOut(clamp((t-0.7)/0.6,0,1)))}em`;
+          op(recBox, clamp((t-0.2)/0.5,0,1)*clamp((2.2-t)/0.5,0,1));
+          const sp=clamp((t-0.5)/1.1,0,1);
+          sweep.style.left=`${lerp(-36,112,sp)}%`;
+          op(sweep, sp>0&&sp<1?1:0);
+          document.getElementById("scene1").style.opacity=String(clamp((2.4-t)/0.3,0,1));
         }
 
         if (s2) {
-          const lt = t - 2.6; // 0..2.6 local
-          const sceneA = clamp(lt / 0.3, 0, 1) * clamp((2.6 - lt) / 0.35, 0, 1);
-          document.getElementById("scene2").style.opacity = String(sceneA);
-          setOpacity(barLabel, clamp((lt - 0.15) / 0.4, 0, 1));
-          // buttons pop in staggered; companion buttons glow as they land
-          barBtns.forEach((btn, i) => {
-            const start = 0.15 + i * 0.16;
-            const a = clamp((lt - start) / 0.32, 0, 1);
-            setOpacity(btn, a);
-            const sc = lerp(0.4, 1, easeOut(a));
-            const isComp = btn.dataset.companion === "1";
-            btn.style.transform = `scale(${sc.toFixed(3)})`;
-            // glow ring on companion buttons briefly as they appear
-            const justLanded = isComp && a > 0.6 && lt < start + 0.9;
-            btn.classList.toggle("glow", justLanded);
+          const lt=t-2.4;
+          document.getElementById("scene2").style.opacity=String(clamp(lt/0.25,0,1)*clamp((2.4-lt)/0.3,0,1));
+          op(barLabel, clamp((lt-0.1)/0.4,0,1));
+          barLabel.style.transform=`translateX(-50%) translateY(${lerp(14,0,easeOut(clamp((lt-0.1)/0.4,0,1)))}px)`;
+          barBtns.forEach((btn,i)=>{
+            const start=0.12+i*0.14;
+            const a=clamp((lt-start)/0.3,0,1);
+            op(btn,a);
+            btn.style.transform=`translateY(${lerp(16,0,easeOut(a))}px) scale(${lerp(0.5,1,easeOut(a)).toFixed(3)})`;
+            const isComp=btn.dataset.companion==="1";
+            btn.classList.toggle("glow", isComp && a>0.55 && lt<start+1.0);
           });
         }
 
         if (s3) {
-          const lt = t - 5.2; // 0..3.2
-          const per = 3.2 / FEATURES.length; // 0.8s each
-          const idx = clamp(Math.floor(lt / per), 0, FEATURES.length - 1);
-          const f = FEATURES[idx];
-          featureText.innerHTML =
-            '<span class="big">' + f.big + ' <span class="accent">' + f.accent + '</span></span>' +
-            '<span class="sub">' + f.sub + '</span>';
-          const local = (lt - idx * per) / per; // 0..1 within this feature
-          // pop in (0-0.25), hold, pop out (0.8-1)
-          const inA = clamp(local / 0.22, 0, 1);
-          const outA = clamp((1 - local) / 0.18, 0, 1);
-          const a = Math.min(inA, outA);
-          setOpacity(featureText, a);
-          const sc = lerp(0.86, 1, easeOut(inA));
-          featureText.style.transform = `scale(${sc.toFixed(3)})`;
-          featureText.style.letterSpacing = `${lerp(0.18, 0.02, easeOut(inA))}em`;
+          const lt=t-4.8, per=3.8/FEATURES.length;
+          const idx=clamp(Math.floor(lt/per),0,FEATURES.length-1);
+          const f=FEATURES[idx];
+          featureText.innerHTML='<span class="big">'+f.big+' <span class="accent">'+f.accent+'</span></span><span class="sub">'+f.sub+'</span>';
+          const local=(lt-idx*per)/per;
+          const inA=clamp(local/0.2,0,1), outA=clamp((1-local)/0.16,0,1);
+          op(featureText, Math.min(inA,outA));
+          featureText.style.transform=`translate(-50%,-50%) translateY(${lerp(26,0,easeOut(inA))}px) scale(${lerp(0.88,1,easeOut(inA)).toFixed(3)})`;
         }
 
         if (s4) {
-          const lt = t - 8.4; // 0..2.6
-          const a = clamp(lt / 0.5, 0, 1);
-          setOpacity(document.getElementById("scene4"), 1);
-          setOpacity(closeMark, a);
-          closeMark.style.transform = `scale(${lerp(0.92,1,easeOut(a))})`;
-          // rule wipes out from center
-          const rw = clamp((lt - 0.35) / 0.5, 0, 1);
-          closeRule.style.width = `${(rw * 360).toFixed(0)}px`;
-          setOpacity(tagline, clamp((lt - 0.7) / 0.5, 0, 1));
-          setOpacity(ver, clamp((lt - 1.05) / 0.5, 0, 1));
-          // subtle final settle: tiny fade of grain handled by CSS; nothing else
+          const lt=t-8.6;
+          op(document.getElementById("scene4"),1);
+          const a=clamp(lt/0.5,0,1);
+          op(closeMark,a);
+          closeMark.style.transform=`translate(-50%,-50%) scale(${lerp(0.9,1,easeOut(a)).toFixed(3)})`;
+          closeMark.style.filter=`blur(${lerp(6,0,easeOut(a)).toFixed(2)}px)`;
+          const rw=clamp((lt-0.35)/0.5,0,1);
+          closeRule.style.width=`${(rw*380).toFixed(0)}px`;
+          op(tagline, clamp((lt-0.7)/0.5,0,1));
+          tagline.style.transform=`translateX(-50%) translateY(${lerp(12,0,easeOut(clamp((lt-0.7)/0.5,0,1)))}px)`;
+          op(ver, clamp((lt-1.05)/0.5,0,1));
         }
       }
 
-      // expose for capture; also self-run when opened directly in a browser for preview
-      window.setT = setT;
-      window.__DURATION = 11;
+      window.setT=setT; window.__DURATION=11;
       if (!window.__CAPTURE) {
-        const start = performance.now();
-        function loop(now) {
-          let t = (now - start) / 1000;
-          if (t > 11) t = t % 11; // loop preview
-          setT(t);
-          requestAnimationFrame(loop);
-        }
-        setT(0);
-        requestAnimationFrame(loop);
+        const start=performance.now();
+        (function loop(now){ let t=(now-start)/1000; if(t>11)t%=11; setT(t); requestAnimationFrame(loop); })(performance.now());
       }
     </script>
   </body>
