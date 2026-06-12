@@ -185,7 +185,9 @@ function cloneNativeSeek(group, sourceUia, nfId, label, iconKey, onClick) {
   const svg = wrap.querySelector("svg");
   if (svg) {
     svg.removeAttribute("data-uia");
-    svg.setAttribute("viewBox", "0 0 24 24");
+    // Crop the 24x24 viewBox inward to zoom the arrow so it fills the button like the
+    // native 10s icon (the raw path leaves empty margin at 0 0 24 24).
+    svg.setAttribute("viewBox", "2 1 20 21");
     svg.setAttribute("fill", "currentColor");
     while (svg.firstChild) svg.removeChild(svg.firstChild);
     const ns = "http://www.w3.org/2000/svg";
