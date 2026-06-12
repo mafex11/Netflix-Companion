@@ -339,6 +339,62 @@
         letter-spacing: 0.04em;
       }
 
+      .sliders {
+        padding: 4px 18px 14px;
+      }
+
+      .slider-row {
+        padding: 10px 0;
+        border-bottom: 1px solid var(--line-dim);
+      }
+
+      .slider-row:last-child {
+        border-bottom: none;
+      }
+
+      .slider-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 8px;
+      }
+
+      .slider-name {
+        font-family: "Anton", sans-serif;
+        font-size: 16px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--ink);
+      }
+
+      .slider-value {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--red);
+      }
+
+      input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 4px;
+        background: var(--line);
+        border-radius: 2px;
+        outline: none;
+      }
+
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--red);
+        cursor: pointer;
+        box-shadow: 0 0 8px var(--red-glow);
+      }
+
       footer {
         display: flex;
         justify-content: space-between;
@@ -459,6 +515,37 @@
         <span class="channel-desc">Picture-in-picture button</span>
         <span class="switch">
           <input type="checkbox" id="showPipButton" />
+          <span class="switch-track-on">ON</span>
+          <span class="switch-track-off">OFF</span>
+          <span class="switch-knob"></span>
+        </span>
+      </label>
+    </div>
+
+    <div class="section-label">Audio & Speed</div>
+
+    <div class="sliders">
+      <div class="slider-row">
+        <div class="slider-head">
+          <span class="slider-name">Speed</span>
+          <span class="slider-value" id="speedValue">1.0&times;</span>
+        </div>
+        <input type="range" id="playbackSpeed" min="0.1" max="4" step="0.1" value="1" />
+      </div>
+
+      <div class="slider-row">
+        <div class="slider-head">
+          <span class="slider-name">Volume Boost</span>
+          <span class="slider-value" id="volumeValue">100%</span>
+        </div>
+        <input type="range" id="volumeBoost" min="1" max="5" step="0.1" value="1" />
+      </div>
+
+      <label class="channel" data-key="normalizer">
+        <span class="channel-name">Normalizer</span>
+        <span class="channel-desc">Even out loud & quiet audio</span>
+        <span class="switch">
+          <input type="checkbox" id="normalizer" />
           <span class="switch-track-on">ON</span>
           <span class="switch-track-off">OFF</span>
           <span class="switch-knob"></span>
