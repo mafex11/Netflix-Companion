@@ -12,7 +12,7 @@ const DEFAULTS = {
 };
 
 function applyVisuals(settings) {
-  for (const key of KEYS) {
+  for (const key of [...KEYS, ...CONTROL_KEYS]) {
     const input = document.getElementById(key);
     input.checked = settings[key];
     input.closest(".channel").classList.toggle("on", !!settings[key]);
@@ -40,7 +40,7 @@ async function broadcast(settings) {
 }
 
 function wire() {
-  for (const key of KEYS) {
+  for (const key of [...KEYS, ...CONTROL_KEYS]) {
     document.getElementById(key).addEventListener("change", async (e) => {
       const settings = await chrome.storage.sync.get(DEFAULTS);
       settings[key] = e.target.checked;
