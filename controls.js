@@ -115,6 +115,45 @@ function frameStep(dir) {
   window.postMessage({ source: "nf-companion", type: "frameStep", dir: dir }, "*");
 }
 
+// Set playback rate (0.1–4). Handled in injected.js (main world).
+function setSpeed(rate) {
+  ensureInjected();
+  window.postMessage({ source: "nf-companion", type: "setSpeed", rate: rate }, "*");
+}
+
+// Set volume boost multiplier (1–5). Handled in injected.js.
+function setVolume(boost) {
+  ensureInjected();
+  window.postMessage({ source: "nf-companion", type: "setVolume", boost: boost }, "*");
+}
+
+// Enable/disable the audio normalizer (compressor). Handled in injected.js.
+function setNormalizer(on) {
+  ensureInjected();
+  window.postMessage({ source: "nf-companion", type: "setNormalizer", on: on }, "*");
+}
+
+// Brief centered on-screen toast (used by speed shortcuts). Auto-removes.
+let toastEl = null;
+let toastTimer = null;
+function showToast(text) {
+  if (!toastEl) {
+    toastEl = document.createElement("div");
+    toastEl.style.cssText =
+      "position:fixed;top:12%;left:50%;transform:translateX(-50%);z-index:2147483647;" +
+      "background:rgba(0,0,0,0.8);color:#fff;font-family:sans-serif;font-size:22px;" +
+      "font-weight:700;padding:10px 18px;border-radius:6px;pointer-events:none;" +
+      "transition:opacity 0.2s;opacity:0;";
+    document.documentElement.appendChild(toastEl);
+  }
+  toastEl.textContent = text;
+  toastEl.style.opacity = "1";
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    if (toastEl) toastEl.style.opacity = "0";
+  }, 800);
+}
+
 async function togglePip(btn) {
   const video = getVideo();
   if (!video) return;
