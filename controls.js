@@ -62,7 +62,7 @@ function makeSeekLabel(seconds) {
   span.textContent = String(seconds);
   span.style.cssText =
     "position:absolute;bottom:11px;left:50%;transform:translateX(-50%);" +
-    "font-size:10px;font-weight:700;pointer-events:none;";
+    "font-size:13px;font-weight:700;pointer-events:none;";
   return span;
 }
 
