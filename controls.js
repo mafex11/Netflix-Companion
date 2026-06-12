@@ -85,25 +85,24 @@ function findControlCluster() {
   return { group, wrapperTemplate, buttonTemplate: playPause };
 }
 
+// Inject the MAIN-world helper script once. Setting video.currentTime directly desyncs
+// Netflix's Cadmium player and tears the <video> element down, so seeking must go through
+// Netflix's own player API — which only lives on the page's window, unreachable from this
+// isolated content-script world. injected.js runs in the main world and listens for our
+// postMessage seek requests.
+let injectedReady = false;
+function ensureInjected() {
+  if (injectedReady) return;
+  injectedReady = true;
+  const s = document.createElement("script");
+  s.src = chrome.runtime.getURL("injected.js");
+  s.onload = () => s.remove(); // tidy up the tag; the listener it registered persists
+  (document.head || document.documentElement).appendChild(s);
+}
+
 function seek(deltaSeconds) {
-  const video = getVideo();
-  if (!video) {
-    console.log("[netflix-companion] seek: no <video> found");
-    return;
-  }
-  const before = video.currentTime;
-  const target = Math.max(0, before + deltaSeconds);
-  video.currentTime = target;
-  console.log(
-    "[netflix-companion] seek: delta=" + deltaSeconds +
-    " before=" + before.toFixed(2) +
-    " set=" + target.toFixed(2) +
-    " immediate=" + video.currentTime.toFixed(2)
-  );
-  // Re-check shortly after to see if Netflix's player reverted the seek.
-  setTimeout(() => {
-    console.log("[netflix-companion] seek: after 300ms currentTime=" + getVideo()?.currentTime.toFixed(2));
-  }, 300);
+  // Hand the seek to the main-world script, which calls Netflix's player API.
+  window.postMessage({ source: "nf-companion", type: "seek", delta: deltaSeconds }, "*");
 }
 
 async function togglePip(btn) {
@@ -261,6 +260,7 @@ function injectControls(settings) {
   }
 
   if (settings.show5sButtons) {
+    ensureInjected(); // load the main-world seek helper before the user can click
     const backWrap = cloneNativeSeek(
       group, "control-back10", "nf-back5", "Rewind 5 seconds", "rewind5",
       () => seek(-5)

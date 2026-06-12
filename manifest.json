@@ -16,6 +16,12 @@
       "all_frames": false
     }
   ],
+  "web_accessible_resources": [
+    {
+      "resources": ["injected.js"],
+      "matches": ["*://*.netflix.com/*"]
+    }
+  ],
   "action": {
     "default_popup": "popup.html",
     "default_title": "Netflix Auto-Skip",
