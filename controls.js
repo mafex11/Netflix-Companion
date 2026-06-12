@@ -187,7 +187,7 @@ function cloneNativeSeek(group, sourceUia, nfId, label, iconKey, onClick) {
     svg.removeAttribute("data-uia");
     // Crop the 24x24 viewBox inward to zoom the arrow so it fills the button like the
     // native 10s icon (the raw path leaves empty margin at 0 0 24 24).
-    svg.setAttribute("viewBox", "2 1 20 21");
+    svg.setAttribute("viewBox", "1 0 22 23");
     svg.setAttribute("fill", "currentColor");
     // Nudge just the arrow icon up so it isn't clipped at the bottom. The "5" badge is a
     // separate absolutely-positioned overlay and is NOT affected by this transform.
