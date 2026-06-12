@@ -56,13 +56,16 @@ function makeWrapper(wrapperTemplate, buttonEl) {
   return wrap;
 }
 
-// Build a "5" badge overlay element for the seek buttons (so 5s reads distinct from 10s).
-function makeSeekLabel(seconds) {
+// Build a small numeric badge overlay for seek buttons (so they read distinct from the
+// native 10s buttons). Two-digit text (e.g. "90") uses a smaller font so it still fits.
+function makeSeekLabel(text) {
+  const str = String(text);
   const span = document.createElement("span");
-  span.textContent = String(seconds);
+  span.textContent = str;
+  const fontSize = str.length >= 2 ? "10px" : "13px";
   span.style.cssText =
     "position:absolute;bottom:11px;left:50%;transform:translateX(-50%);" +
-    "font-size:13px;font-weight:700;pointer-events:none;";
+    "font-size:" + fontSize + ";font-weight:700;pointer-events:none;";
   return span;
 }
 
@@ -166,7 +169,7 @@ function nativeWrapper(group, uia) {
 // badge. Cloning the 10s button gives us its exact inner structure (button > div > svg)
 // and CSS sizing for free; we only replace the SVG path so it doesn't read "10".
 // Returns the cloned WRAPPER ready to insert, or null if the native button is missing.
-function cloneNativeSeek(group, sourceUia, nfId, label, iconKey, onClick) {
+function cloneNativeSeek(group, sourceUia, nfId, label, iconKey, badgeText, onClick) {
   const src = group.querySelector(`[data-uia="${sourceUia}"]`);
   if (!src || !src.parentElement) return null;
   const wrap = src.parentElement.cloneNode(true);
@@ -201,8 +204,8 @@ function cloneNativeSeek(group, sourceUia, nfId, label, iconKey, onClick) {
   // React click listeners are NOT cloned, so the clone is inert until we attach ours.
   btn.addEventListener("click", onClick);
 
-  // Overlay a "5" badge so it reads as 5s vs the native 10s icon.
-  btn.appendChild(makeSeekLabel(5));
+  // Overlay the seconds badge so it reads distinct from the native 10s icon.
+  btn.appendChild(makeSeekLabel(badgeText));
   return wrap;
 }
 
@@ -262,13 +265,13 @@ function injectControls(settings) {
   if (settings.show5sButtons) {
     ensureInjected(); // load the main-world seek helper before the user can click
     const backWrap = cloneNativeSeek(
-      group, "control-back10", "nf-back5", "Rewind 5 seconds", "rewind5",
+      group, "control-back10", "nf-back5", "Rewind 5 seconds", "rewind5", "5",
       () => seek(-5)
     );
     if (backWrap) placeButtonWithSpacing(backWrap);
 
     const fwdWrap = cloneNativeSeek(
-      group, "control-forward10", "nf-fwd5", "Forward 5 seconds", "forward5",
+      group, "control-forward10", "nf-fwd5", "Forward 5 seconds", "forward5", "5",
       () => seek(5)
     );
     if (fwdWrap) placeButtonWithSpacing(fwdWrap);
