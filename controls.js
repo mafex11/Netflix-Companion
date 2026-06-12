@@ -135,6 +135,7 @@ async function togglePip(btn) {
 // loop (runaway CPU/memory, and Netflix's control bar never gets to render).
 const CONTROL_IDS = {
   show5sButtons: ["nf-back5", "nf-fwd5"],
+  show90sButtons: ["nf-back90", "nf-fwd90"],
   showPipButton: ["nf-pip"],
 };
 
@@ -275,6 +276,21 @@ function injectControls(settings) {
       () => seek(5)
     );
     if (fwdWrap) placeButtonWithSpacing(fwdWrap);
+  }
+
+  if (settings.show90sButtons) {
+    ensureInjected();
+    const back90 = cloneNativeSeek(
+      group, "control-back10", "nf-back90", "Rewind 90 seconds", "rewind5", "90",
+      () => seek(-90)
+    );
+    if (back90) placeButtonWithSpacing(back90);
+
+    const fwd90 = cloneNativeSeek(
+      group, "control-forward10", "nf-fwd90", "Forward 90 seconds", "forward5", "90",
+      () => seek(90)
+    );
+    if (fwd90) placeButtonWithSpacing(fwd90);
   }
 
   if (settings.showPipButton) {
