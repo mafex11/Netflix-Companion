@@ -150,6 +150,16 @@
   }
 
   function applyAudio() {
+    // IMPORTANT: only route audio through Web Audio when the user actually wants boost
+    // or normalization. Netflix audio is EME/DRM-protected; routing it through
+    // createMediaElementSource can output silence in some Chrome configs, and once an
+    // element is routed it can't be un-routed for that element's lifetime. So at the
+    // default (boost 1×, normalizer off) we leave the native audio path completely
+    // untouched, and never build a graph until the user opts in. This keeps the default
+    // experience safe — the feature can only ever affect users who turn it on.
+    const wantsAudioGraph = desiredBoost > 1.001 || normalizerOn;
+    if (!wantsAudioGraph && !audioGraph) return;
+
     const g = ensureGraph();
     if (!g) return;
     if (g.ctx.state === "suspended") g.ctx.resume();
