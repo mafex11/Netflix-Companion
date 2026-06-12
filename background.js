@@ -4,6 +4,7 @@ const DEFAULTS = {
   nextEpisode: true,
   stillWatching: true,
   show5sButtons: true,
+  show90sButtons: true,
   showPipButton: true,
   count: 0,
 };
