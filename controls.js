@@ -87,8 +87,23 @@ function findControlCluster() {
 
 function seek(deltaSeconds) {
   const video = getVideo();
-  if (!video) return;
-  video.currentTime = Math.max(0, video.currentTime + deltaSeconds);
+  if (!video) {
+    console.log("[netflix-companion] seek: no <video> found");
+    return;
+  }
+  const before = video.currentTime;
+  const target = Math.max(0, before + deltaSeconds);
+  video.currentTime = target;
+  console.log(
+    "[netflix-companion] seek: delta=" + deltaSeconds +
+    " before=" + before.toFixed(2) +
+    " set=" + target.toFixed(2) +
+    " immediate=" + video.currentTime.toFixed(2)
+  );
+  // Re-check shortly after to see if Netflix's player reverted the seek.
+  setTimeout(() => {
+    console.log("[netflix-companion] seek: after 300ms currentTime=" + getVideo()?.currentTime.toFixed(2));
+  }, 300);
 }
 
 async function togglePip(btn) {
@@ -147,6 +162,46 @@ function nativeWrapper(group, uia) {
   return btn ? btn.parentElement : null;
 }
 
+// Clone a native control button (and its wrapper) so size/styling/spacing are
+// pixel-identical to Netflix's own buttons, then swap in our own arrow icon and a "5"
+// badge. Cloning the 10s button gives us its exact inner structure (button > div > svg)
+// and CSS sizing for free; we only replace the SVG path so it doesn't read "10".
+// Returns the cloned WRAPPER ready to insert, or null if the native button is missing.
+function cloneNativeSeek(group, sourceUia, nfId, label, iconKey, onClick) {
+  const src = group.querySelector(`[data-uia="${sourceUia}"]`);
+  if (!src || !src.parentElement) return null;
+  const wrap = src.parentElement.cloneNode(true);
+  wrap.classList.add(WRAP_MARK);
+
+  const btn = wrap.querySelector("button") || wrap;
+  btn.classList.add(MARK);
+  btn.dataset.nfControl = nfId;
+  btn.removeAttribute("data-uia");
+  btn.setAttribute("aria-label", label);
+  btn.setAttribute("title", label);
+  btn.style.position = "relative";
+
+  // Swap the cloned SVG's path for our arrow (keeps native svg sizing; drops the "10").
+  const svg = wrap.querySelector("svg");
+  if (svg) {
+    svg.removeAttribute("data-uia");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("fill", "currentColor");
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    const ns = "http://www.w3.org/2000/svg";
+    const path = document.createElementNS(ns, "path");
+    path.setAttribute("d", ICONS[iconKey]);
+    svg.appendChild(path);
+  }
+
+  // React click listeners are NOT cloned, so the clone is inert until we attach ours.
+  btn.addEventListener("click", onClick);
+
+  // Overlay a "5" badge so it reads as 5s vs the native 10s icon.
+  btn.appendChild(makeSeekLabel(5));
+  return wrap;
+}
+
 // Inject/sync our buttons into the control bar. This runs on every observer tick, so
 // the fast path is a pure READ: if the buttons already match the desired state we
 // return without touching the DOM (no self-trigger, no loop). We only mutate when the
@@ -170,36 +225,54 @@ function injectControls(settings) {
 
   const forward10Wrap = nativeWrapper(group, "control-forward10");
 
-  // Insert our buttons as a contiguous block AFTER the native 10s forward button, so the
-  // 5s controls stay visually distinct from Netflix's 10s controls. We keep a moving
-  // anchor: each new wrapper goes right after the previous one.
-  let anchorWrap = forward10Wrap;
-  function placeAfterAnchor(wrap) {
-    if (anchorWrap) anchorWrap.insertAdjacentElement("afterend", wrap);
-    else group.appendChild(wrap);
-    anchorWrap = wrap;
+  // The ~30px spacer div that sits between each native button wrapper — clone it so our
+  // buttons get the same horizontal gaps. It's the sibling right after a button wrapper.
+  const spacerTemplate =
+    forward10Wrap &&
+    forward10Wrap.nextElementSibling &&
+    !forward10Wrap.nextElementSibling.querySelector("button")
+      ? forward10Wrap.nextElementSibling
+      : null;
+  function makeSpacer() {
+    if (!spacerTemplate) return null;
+    const s = spacerTemplate.cloneNode(true);
+    s.classList.add(WRAP_MARK); // tag so cleanup removes our spacers too
+    return s;
+  }
+
+  // Insert our buttons as a contiguous block AFTER the native 10s forward button, each
+  // followed by a spacer clone so spacing matches the native buttons. Moving anchor:
+  // every new element goes right after the previous one.
+  let anchor = forward10Wrap;
+  function placeAfterAnchor(el) {
+    if (anchor) anchor.insertAdjacentElement("afterend", el);
+    else group.appendChild(el);
+    anchor = el;
+  }
+  function placeButtonWithSpacing(wrap) {
+    const spacer = makeSpacer();
+    if (spacer) placeAfterAnchor(spacer); // gap before our button
+    placeAfterAnchor(wrap);
   }
 
   if (settings.show5sButtons) {
-    const back = makeButton(buttonTemplate, "Rewind 5 seconds", makeIcon("rewind5"));
-    back.dataset.nfControl = "nf-back5";
-    back.style.position = "relative";
-    back.appendChild(makeSeekLabel(5));
-    back.addEventListener("click", () => seek(-5));
-    placeAfterAnchor(makeWrapper(wrapperTemplate, back));
+    const backWrap = cloneNativeSeek(
+      group, "control-back10", "nf-back5", "Rewind 5 seconds", "rewind5",
+      () => seek(-5)
+    );
+    if (backWrap) placeButtonWithSpacing(backWrap);
 
-    const fwd = makeButton(buttonTemplate, "Forward 5 seconds", makeIcon("forward5"));
-    fwd.dataset.nfControl = "nf-fwd5";
-    fwd.style.position = "relative";
-    fwd.appendChild(makeSeekLabel(5));
-    fwd.addEventListener("click", () => seek(5));
-    placeAfterAnchor(makeWrapper(wrapperTemplate, fwd));
+    const fwdWrap = cloneNativeSeek(
+      group, "control-forward10", "nf-fwd5", "Forward 5 seconds", "forward5",
+      () => seek(5)
+    );
+    if (fwdWrap) placeButtonWithSpacing(fwdWrap);
   }
 
   if (settings.showPipButton) {
     const pipBtn = makeButton(buttonTemplate, "Picture in picture", makeIcon("pip"));
     pipBtn.dataset.nfControl = "nf-pip";
     pipBtn.addEventListener("click", () => togglePip(pipBtn));
-    placeAfterAnchor(makeWrapper(wrapperTemplate, pipBtn));
+    placeButtonWithSpacing(makeWrapper(wrapperTemplate, pipBtn));
   }
 }
