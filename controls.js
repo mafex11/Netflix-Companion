@@ -110,16 +110,16 @@ function dumpControlBar() {
   console.log("[netflix-companion] === END DUMP ===");
 }
 
-// Find the native left-cluster button row, and a template button to clone styling from.
-// Returns { cluster, template } or null if the control bar isn't present yet.
+// Find the native button row and a template button to clone styling from.
+// Netflix puts all control buttons (play-pause, back10, forward10, volume, …,
+// fullscreen) as siblings in one flat row — that row is the play-pause button's
+// parent. We anchor to the play-pause button (always present) rather than to
+// bar.firstChild, which is an outer wrapper that also contains the timeline scrubber.
+// Returns { row, template } or null if the control bar isn't present yet.
 function findControlCluster() {
-  const bar = document.querySelector('[data-uia="controls-standard"]');
-  if (!bar || !bar.firstChild) return null;
-  const cluster = bar.firstChild;
-  // The first child element of the cluster is a real Netflix control button — clone its style.
-  const template = cluster.querySelector("button");
-  if (!template) return null;
-  return { cluster, template };
+  const playPause = document.querySelector('[data-uia^="control-play-pause"]');
+  if (!playPause || !playPause.parentElement) return null;
+  return { row: playPause.parentElement, template: playPause };
 }
 
 function seek(deltaSeconds) {
@@ -183,10 +183,10 @@ function desiredIds(settings) {
 }
 
 // Read-only check: are exactly the desired buttons present, no more, no fewer?
-function controlsInDesiredState(cluster, settings) {
+function controlsInDesiredState(row, settings) {
   const want = desiredIds(settings);
   const have = new Set(
-    Array.from(cluster.querySelectorAll(`.${MARK}`)).map((el) => el.dataset.nfControl)
+    Array.from(row.querySelectorAll(`.${MARK}`)).map((el) => el.dataset.nfControl)
   );
   if (want.size !== have.size) return false;
   for (const id of want) if (!have.has(id)) return false;
@@ -200,16 +200,20 @@ function controlsInDesiredState(cluster, settings) {
 function injectControls(settings) {
   const found = findControlCluster();
   if (!found) return;
-  const { cluster, template } = found;
+  const { row, template } = found;
 
   // One-time: dump the real control-bar structure for debugging insertion point.
   dumpControlBar();
 
   // Fast path: nothing to do. Pure read — does not mutate the DOM.
-  if (controlsInDesiredState(cluster, settings)) return;
+  if (controlsInDesiredState(row, settings)) return;
 
   // State is wrong — rebuild our buttons. Remove ours first, then re-add.
-  cluster.querySelectorAll(`.${MARK}`).forEach((el) => el.remove());
+  row.querySelectorAll(`.${MARK}`).forEach((el) => el.remove());
+
+  // Native sibling anchors (all live in the same flat row).
+  const back10 = row.querySelector('[data-uia="control-back10"]');
+  const forward10 = row.querySelector('[data-uia="control-forward10"]');
 
   if (settings.show5sButtons) {
     const back = makeButton(template, "Rewind 5 seconds", makeIcon("rewind5"));
@@ -224,10 +228,21 @@ function injectControls(settings) {
     fwd.appendChild(makeSeekLabel(5));
     fwd.addEventListener("click", () => seek(5));
 
-    // Insert the 5s buttons right after the play/pause button (cluster's first button).
-    const anchor = cluster.querySelector("button");
-    anchor.insertAdjacentElement("afterend", fwd);
-    anchor.insertAdjacentElement("afterend", back);
+    // Place 5s rewind just before native 10s rewind; 5s forward just after 10s forward.
+    if (back10) back10.insertAdjacentElement("beforebegin", back);
+    else row.appendChild(back);
+    if (forward10) forward10.insertAdjacentElement("afterend", fwd);
+    else row.appendChild(fwd);
+  }
+
+  if (settings.showPipButton) {
+    const pipBtn = makeButton(template, "Picture in picture", makeIcon("pip"));
+    pipBtn.dataset.nfControl = "nf-pip";
+    pipBtn.addEventListener("click", () => togglePip(pipBtn));
+    // Place PiP just after our 5s forward button if present, else after native 10s forward.
+    const fwdAnchor = row.querySelector('[data-nf-control="nf-fwd5"]') || forward10;
+    if (fwdAnchor) fwdAnchor.insertAdjacentElement("afterend", pipBtn);
+    else row.appendChild(pipBtn);
   }
 
   if (settings.showSpeedButton) {
@@ -240,14 +255,8 @@ function injectControls(settings) {
     const speedBtn = makeButton(template, "Playback speed", speedInner);
     speedBtn.dataset.nfControl = "nf-speed";
     speedBtn.addEventListener("click", () => cycleSpeed(speedBtn));
-    cluster.appendChild(speedBtn);
-  }
-
-  if (settings.showPipButton) {
-    const pipBtn = makeButton(template, "Picture in picture", makeIcon("pip"));
-    pipBtn.dataset.nfControl = "nf-pip";
-    pipBtn.addEventListener("click", () => togglePip(pipBtn));
-    cluster.appendChild(pipBtn);
+    // Append speed at the end of the row (near native speed/fullscreen controls).
+    row.appendChild(speedBtn);
   }
 
   injectionCount += 1;
