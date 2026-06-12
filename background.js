@@ -3,6 +3,9 @@ const DEFAULTS = {
   skipRecap: true,
   nextEpisode: true,
   stillWatching: true,
+  show5sButtons: true,
+  showSpeedButton: true,
+  showPipButton: true,
   count: 0,
 };
 

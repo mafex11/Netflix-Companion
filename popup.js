@@ -1,9 +1,13 @@
 const KEYS = ["skipIntro", "skipRecap", "nextEpisode", "stillWatching"];
+const CONTROL_KEYS = ["show5sButtons", "showSpeedButton", "showPipButton"];
 const DEFAULTS = {
   skipIntro: true,
   skipRecap: true,
   nextEpisode: true,
   stillWatching: true,
+  show5sButtons: true,
+  showSpeedButton: true,
+  showPipButton: true,
   count: 0,
 };
 
