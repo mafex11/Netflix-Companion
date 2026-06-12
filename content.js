@@ -76,3 +76,49 @@ observer.observe(document.documentElement, {
 });
 
 trySkip();
+
+// Keyboard shortcuts. Active only on /watch pages, ignored while typing in a field.
+// Keys use event.code (layout-independent). Reuses the global seek/frameStep/togglePip
+// functions from controls.js (same content-script scope).
+function isTypingTarget(el) {
+  if (!el) return false;
+  const tag = el.tagName;
+  return tag === "INPUT" || tag === "TEXTAREA" || el.isContentEditable;
+}
+
+function onKeydown(e) {
+  if (!location.pathname.startsWith("/watch")) return;
+  if (isTypingTarget(e.target)) return;
+  if (e.altKey || e.ctrlKey || e.metaKey) return;
+
+  let handled = true;
+  switch (e.code) {
+    case "BracketLeft":
+      seek(e.shiftKey ? -90 : -5);
+      break;
+    case "BracketRight":
+      seek(e.shiftKey ? 90 : 5);
+      break;
+    case "Comma":
+      if (e.shiftKey) { handled = false; break; }
+      frameStep(-1);
+      break;
+    case "Period":
+      if (e.shiftKey) { handled = false; break; }
+      frameStep(1);
+      break;
+    case "KeyP":
+      if (e.shiftKey) { handled = false; break; }
+      togglePip();
+      break;
+    default:
+      handled = false;
+  }
+
+  if (handled) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+}
+
+document.addEventListener("keydown", onKeydown, true);
