@@ -66,6 +66,11 @@ function trySkip() {
     const button = findVisible(selectors);
     if (button) clickOnce(button, key);
   }
+  // injectControls is defined in controls.js (loaded first). It is idempotent and
+  // only acts on /watch pages where the control bar exists.
+  if (typeof injectControls === "function" && location.pathname.startsWith("/watch")) {
+    injectControls(settings);
+  }
 }
 
 const observer = new MutationObserver(trySkip);
