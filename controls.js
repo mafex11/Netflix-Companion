@@ -60,7 +60,6 @@ let speedIndex = 0;
 // Count of times we actually mutated the control bar. If this climbs without bound
 // while the video sits still, the injection is self-triggering the observer (a bug).
 let injectionCount = 0;
-let layoutDumped = false;
 
 function getVideo() {
   return document.querySelector("video");
@@ -78,6 +77,19 @@ function describe(el) {
   const uia = el.getAttribute && el.getAttribute("data-uia");
   return el.tagName.toLowerCase() + cls + (uia ? `[data-uia="${uia}"]` : "");
 }
+// Compact geometry + layout summary for one element.
+function geom(el) {
+  const r = el.getBoundingClientRect();
+  const cs = getComputedStyle(el);
+  const flexBits = cs.display.includes("flex")
+    ? ` dir=${cs.flexDirection} wrap=${cs.flexWrap}`
+    : "";
+  return (
+    `box[x=${Math.round(r.x)} y=${Math.round(r.y)} w=${Math.round(r.width)} h=${Math.round(r.height)}]` +
+    ` display=${cs.display}${flexBits} pos=${cs.position}`
+  );
+}
+
 function dumpControlBar() {
   if (dumped) return;
   const bar = document.querySelector('[data-uia="controls-standard"]');
@@ -86,29 +98,26 @@ function dumpControlBar() {
     return;
   }
   dumped = true;
-  console.log("[netflix-companion] === CONTROL BAR DUMP ===");
+  console.log("[netflix-companion] === FULL CONTROL BAR TREE ===");
 
-  // List every native button under the control bar, with its data-uia/aria-label and
-  // the chain of ancestor containers up to the bar. This shows exactly which group
-  // holds the play/seek buttons so we can insert our buttons as their siblings.
-  const buttons = bar.querySelectorAll("button");
-  console.log("[netflix-companion] found", buttons.length, "native buttons:");
-  buttons.forEach((btn, i) => {
-    const uia = btn.getAttribute("data-uia") || "";
-    const aria = btn.getAttribute("aria-label") || "";
-    // Build ancestor chain (class of each parent) up to the bar.
-    const chain = [];
-    let p = btn.parentElement;
-    while (p && p !== bar && chain.length < 5) {
-      const cls = (typeof p.className === "string" ? p.className.trim().split(/\s+/).join(".") : "");
-      chain.push(cls || p.tagName.toLowerCase());
-      p = p.parentElement;
-    }
-    console.log(
-      `  [${i}] data-uia="${uia}" aria="${aria}"  parents: ${chain.join("  <  ")}`
-    );
-  });
-  console.log("[netflix-companion] === END DUMP ===");
+  // Recursive tree dump: every element under the bar, with indent, identity, and geometry.
+  // Mark our own injected buttons with >>> so we can see exactly where they landed.
+  function walk(el, depth) {
+    const isOurs = el.classList && el.classList.contains(MARK);
+    const tag = el.tagName ? el.tagName.toLowerCase() : "?";
+    const uia = el.getAttribute && el.getAttribute("data-uia");
+    const aria = el.getAttribute && el.getAttribute("aria-label");
+    const nfc = el.dataset && el.dataset.nfControl;
+    const label =
+      tag +
+      (uia ? `[data-uia="${uia}"]` : "") +
+      (nfc ? `{nf:${nfc}}` : "") +
+      (aria ? ` aria="${aria}"` : "");
+    console.log((isOurs ? ">>> " : "    ") + "  ".repeat(depth) + label + "  " + geom(el));
+    Array.from(el.children).forEach((child) => walk(child, depth + 1));
+  }
+  walk(bar, 0);
+  console.log("[netflix-companion] === END TREE ===");
 }
 
 // Find the native button row and a template button to clone styling from.
@@ -203,9 +212,6 @@ function injectControls(settings) {
   if (!found) return;
   const { row, template } = found;
 
-  // One-time: dump the real control-bar structure for debugging insertion point.
-  dumpControlBar();
-
   // Fast path: nothing to do. Pure read — does not mutate the DOM.
   if (controlsInDesiredState(row, settings)) return;
 
@@ -263,35 +269,7 @@ function injectControls(settings) {
   injectionCount += 1;
   console.log("[netflix-companion] injected controls (mutation #" + injectionCount + ")");
 
-  // One-time layout diagnostics: compare the row's flex behavior and a native button's
-  // box against ours, so we can see WHY our buttons wrap to a second line.
-  if (!layoutDumped) {
-    layoutDumped = true;
-    const rs = getComputedStyle(row);
-    console.log("[netflix-companion] ROW style:",
-      "display=" + rs.display,
-      "flexWrap=" + rs.flexWrap,
-      "flexDirection=" + rs.flexDirection,
-      "alignItems=" + rs.alignItems,
-      "width=" + rs.width,
-      "gap=" + rs.gap);
-    const nativeBtn = row.querySelector('[data-uia="control-back10"]');
-    const ourBtn = row.querySelector(`.${MARK}`);
-    if (nativeBtn) {
-      const r = nativeBtn.getBoundingClientRect();
-      const cs = getComputedStyle(nativeBtn);
-      console.log("[netflix-companion] NATIVE back10:",
-        "w=" + Math.round(r.width), "h=" + Math.round(r.height),
-        "display=" + cs.display, "margin=" + cs.margin, "padding=" + cs.padding,
-        "class=" + nativeBtn.className);
-    }
-    if (ourBtn) {
-      const r = ourBtn.getBoundingClientRect();
-      const cs = getComputedStyle(ourBtn);
-      console.log("[netflix-companion] OURS:",
-        "w=" + Math.round(r.width), "h=" + Math.round(r.height),
-        "display=" + cs.display, "margin=" + cs.margin, "padding=" + cs.padding,
-        "class=" + ourBtn.className);
-    }
-  }
+  // One-time: dump the FULL tree AFTER injection so we see exactly where our buttons
+  // (marked >>>) landed relative to native controls, with geometry.
+  dumpControlBar();
 }
