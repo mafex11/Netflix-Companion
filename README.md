@@ -15,6 +15,9 @@ No accounts. No servers. No tracking. ~80 lines of glue code.
 - **Per-channel toggles** — turn off what you don't want (e.g. leave intros on for shows where the opening is part of the experience)
 - **Skip counter** — running total displayed in the popup and as a badge on the toolbar icon. Click to reset.
 - **Settings sync** — your toggles travel with you across signed-in Chrome profiles
+- **5s Seek** — adds 5-second skip & rewind buttons beside Netflix's native 10s buttons
+- **Speed control** — a one-click button cycling 1x → 1.25x → 1.5x → 2x
+- **Picture-in-Picture** — pop the video into a floating window with one click
 
 ## Install
 
@@ -47,6 +50,10 @@ Netflix renders skip buttons with stable `data-uia` attributes (their internal Q
 6. Listens for `chrome.runtime.onMessage` so popup toggles take effect live without a page reload.
 
 A `WeakSet` of recently-clicked buttons prevents double-firing on rapid DOM mutations.
+
+### Player controls
+
+The extension also injects extra buttons into Netflix's native control bar (`[data-uia="controls-standard"]`). To survive Netflix's rotating obfuscated CSS class names, the injected buttons clone the class list of an existing native control button at runtime, so they always match the current styling. Injection is idempotent and re-runs on each player DOM change, so toggling a control in the popup takes effect without a page reload.
 
 ## Project layout
 
