@@ -1,8 +1,8 @@
-# Netflix Auto-Skip
+# Netflix Companion
 
-A tiny Chrome extension that silently clicks Netflix's **Skip Intro**, **Skip Recap**, **Next Episode**, and **Are You Still Watching?** buttons so your binge never breaks rhythm.
+A lightweight Chrome extension that supercharges the Netflix player: auto-skips **Skip Intro**, **Skip Recap**, **Next Episode**, and **Are You Still Watching?**, and adds **5-second seek** and **Picture-in-Picture** buttons right in the player bar.
 
-No accounts. No servers. No tracking. ~80 lines of glue code.
+No accounts. No servers. No tracking.
 
 ---
 
@@ -15,6 +15,8 @@ No accounts. No servers. No tracking. ~80 lines of glue code.
 - **Per-channel toggles** — turn off what you don't want (e.g. leave intros on for shows where the opening is part of the experience)
 - **Skip counter** — running total displayed in the popup and as a badge on the toolbar icon. Click to reset.
 - **Settings sync** — your toggles travel with you across signed-in Chrome profiles
+- **5s Seek** — adds a 5-second rewind & skip pair after Netflix's native 10s buttons
+- **Picture-in-Picture** — pop the video into a floating window with one click
 
 ## Install
 
@@ -48,12 +50,17 @@ Netflix renders skip buttons with stable `data-uia` attributes (their internal Q
 
 A `WeakSet` of recently-clicked buttons prevents double-firing on rapid DOM mutations.
 
+### Player controls
+
+The extension also injects extra buttons into Netflix's native control bar (`[data-uia="controls-standard"]`). To survive Netflix's rotating obfuscated CSS class names, the injected buttons clone the class list of an existing native control button at runtime, so they always match the current styling. Injection is idempotent and re-runs on each player DOM change, so toggling a control in the popup takes effect without a page reload.
+
 ## Project layout
 
 ```
 netflix-auto-skip/
 ├── manifest.json      Manifest V3 — permissions, content script, popup, service worker
 ├── content.js         Runs on netflix.com; observes DOM; clicks the buttons
+├── controls.js        Injects 5s seek and PiP buttons into the player bar
 ├── background.js      Service worker — owns the skip-counter badge
 ├── popup.html         Popup UI (broadcast-deck aesthetic, custom flip switches)
 ├── popup.js           Reads/writes chrome.storage.sync; broadcasts changes to tabs
@@ -109,6 +116,7 @@ To validate your changes before zipping:
 ```bash
 node -e "JSON.parse(require('fs').readFileSync('manifest.json','utf8'))" && \
 node --check content.js && \
+node --check controls.js && \
 node --check popup.js && \
 node --check background.js && \
 echo OK

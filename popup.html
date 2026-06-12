@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Auto-Skip Console</title>
+    <title>Netflix Companion</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -378,7 +378,7 @@
         <span class="rec-dot"></span>
         <span>WATCHING</span>
       </div>
-      <h1>Auto<span class="accent">·</span>Skip</h1>
+      <h1>Companion<span class="accent">.</span></h1>
     </header>
 
     <div class="section-label">Channels</div>
@@ -429,13 +429,39 @@
       </label>
     </div>
 
+    <div class="section-label">Player</div>
+
+    <div class="channels">
+      <label class="channel" data-key="show5sButtons">
+        <span class="channel-name">5s Seek</span>
+        <span class="channel-desc">Add 5-second skip & rewind buttons</span>
+        <span class="switch">
+          <input type="checkbox" id="show5sButtons" />
+          <span class="switch-track-on">ON</span>
+          <span class="switch-track-off">OFF</span>
+          <span class="switch-knob"></span>
+        </span>
+      </label>
+
+      <label class="channel" data-key="showPipButton">
+        <span class="channel-name">Pip</span>
+        <span class="channel-desc">Picture-in-picture button</span>
+        <span class="switch">
+          <input type="checkbox" id="showPipButton" />
+          <span class="switch-track-on">ON</span>
+          <span class="switch-track-off">OFF</span>
+          <span class="switch-knob"></span>
+        </span>
+      </label>
+    </div>
+
     <div class="counter" id="counter" title="Click to reset">
       <div class="counter-label">Total Skipped</div>
       <div class="counter-value"><span id="counterValue">0</span></div>
     </div>
 
     <footer>
-      <span>v1.0.0</span>
+      <span>v1.1.0</span>
       <span class="status">
         <span class="status-dot"></span>
         <span id="statusText">Idle</span>

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Netflix Auto-Skip",
-  "version": "1.0.0",
-  "description": "Auto-skips Netflix intros, recaps, next-episode prompts, and 'Are you still watching?' overlays.",
+  "name": "Netflix Companion",
+  "version": "1.1.0",
+  "description": "Auto-skips Netflix intros, recaps & prompts, plus 5s seek and picture-in-picture buttons.",
   "permissions": ["storage"],
   "host_permissions": ["*://*.netflix.com/*"],
   "background": {
@@ -11,14 +11,20 @@
   "content_scripts": [
     {
       "matches": ["*://*.netflix.com/*"],
-      "js": ["content.js"],
+      "js": ["controls.js", "content.js"],
       "run_at": "document_idle",
       "all_frames": false
     }
   ],
+  "web_accessible_resources": [
+    {
+      "resources": ["injected.js"],
+      "matches": ["*://*.netflix.com/*"]
+    }
+  ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Netflix Auto-Skip",
+    "default_title": "Netflix Companion",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",

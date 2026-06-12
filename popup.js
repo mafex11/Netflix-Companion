@@ -1,14 +1,17 @@
 const KEYS = ["skipIntro", "skipRecap", "nextEpisode", "stillWatching"];
+const CONTROL_KEYS = ["show5sButtons", "showPipButton"];
 const DEFAULTS = {
   skipIntro: true,
   skipRecap: true,
   nextEpisode: true,
   stillWatching: true,
+  show5sButtons: true,
+  showPipButton: true,
   count: 0,
 };
 
 function applyVisuals(settings) {
-  for (const key of KEYS) {
+  for (const key of [...KEYS, ...CONTROL_KEYS]) {
     const input = document.getElementById(key);
     input.checked = settings[key];
     input.closest(".channel").classList.toggle("on", !!settings[key]);
@@ -36,7 +39,7 @@ async function broadcast(settings) {
 }
 
 function wire() {
-  for (const key of KEYS) {
+  for (const key of [...KEYS, ...CONTROL_KEYS]) {
     document.getElementById(key).addEventListener("change", async (e) => {
       const settings = await chrome.storage.sync.get(DEFAULTS);
       settings[key] = e.target.checked;
