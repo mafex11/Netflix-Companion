@@ -86,16 +86,27 @@ function dumpControlBar() {
   }
   dumped = true;
   console.log("[netflix-companion] === CONTROL BAR DUMP ===");
-  console.log("bar:", describe(bar), "| childNodes:", bar.childNodes.length);
-  // Walk up to 3 levels deep, listing each element child.
-  function walk(el, depth) {
-    if (depth > 3) return;
-    Array.from(el.children).forEach((child, i) => {
-      console.log("  ".repeat(depth) + i + " " + describe(child));
-      walk(child, depth + 1);
-    });
-  }
-  walk(bar, 1);
+
+  // List every native button under the control bar, with its data-uia/aria-label and
+  // the chain of ancestor containers up to the bar. This shows exactly which group
+  // holds the play/seek buttons so we can insert our buttons as their siblings.
+  const buttons = bar.querySelectorAll("button");
+  console.log("[netflix-companion] found", buttons.length, "native buttons:");
+  buttons.forEach((btn, i) => {
+    const uia = btn.getAttribute("data-uia") || "";
+    const aria = btn.getAttribute("aria-label") || "";
+    // Build ancestor chain (class of each parent) up to the bar.
+    const chain = [];
+    let p = btn.parentElement;
+    while (p && p !== bar && chain.length < 5) {
+      const cls = (typeof p.className === "string" ? p.className.trim().split(/\s+/).join(".") : "");
+      chain.push(cls || p.tagName.toLowerCase());
+      p = p.parentElement;
+    }
+    console.log(
+      `  [${i}] data-uia="${uia}" aria="${aria}"  parents: ${chain.join("  <  ")}`
+    );
+  });
   console.log("[netflix-companion] === END DUMP ===");
 }
 
