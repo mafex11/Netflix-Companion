@@ -189,6 +189,9 @@ function cloneNativeSeek(group, sourceUia, nfId, label, iconKey, onClick) {
     // native 10s icon (the raw path leaves empty margin at 0 0 24 24).
     svg.setAttribute("viewBox", "2 1 20 21");
     svg.setAttribute("fill", "currentColor");
+    // Nudge just the arrow icon up so it isn't clipped at the bottom. The "5" badge is a
+    // separate absolutely-positioned overlay and is NOT affected by this transform.
+    svg.style.transform = "translateY(-3px)";
     while (svg.firstChild) svg.removeChild(svg.firstChild);
     const ns = "http://www.w3.org/2000/svg";
     const path = document.createElementNS(ns, "path");
