@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Netflix Companion",
-  "version": "1.1.0",
-  "description": "Auto-skips Netflix intros, recaps & prompts, plus 5s seek and picture-in-picture buttons.",
+  "version": "1.2.0",
+  "description": "Netflix power tools: auto-skip, 5s/90s seek, picture-in-picture, frame-step, playback speed, volume boost, and keyboard shortcuts.",
   "permissions": ["storage"],
   "host_permissions": ["*://*.netflix.com/*"],
   "background": {

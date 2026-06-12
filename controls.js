@@ -56,13 +56,16 @@ function makeWrapper(wrapperTemplate, buttonEl) {
   return wrap;
 }
 
-// Build a "5" badge overlay element for the seek buttons (so 5s reads distinct from 10s).
-function makeSeekLabel(seconds) {
+// Build a small numeric badge overlay for seek buttons (so they read distinct from the
+// native 10s buttons). Two-digit text (e.g. "90") uses a smaller font so it still fits.
+function makeSeekLabel(text) {
+  const str = String(text);
   const span = document.createElement("span");
-  span.textContent = String(seconds);
+  span.textContent = str;
+  const fontSize = str.length >= 2 ? "10px" : "13px";
   span.style.cssText =
     "position:absolute;bottom:11px;left:50%;transform:translateX(-50%);" +
-    "font-size:13px;font-weight:700;pointer-events:none;";
+    "font-size:" + fontSize + ";font-weight:700;pointer-events:none;";
   return span;
 }
 
@@ -102,7 +105,53 @@ function ensureInjected() {
 
 function seek(deltaSeconds) {
   // Hand the seek to the main-world script, which calls Netflix's player API.
+  ensureInjected();
   window.postMessage({ source: "nf-companion", type: "seek", delta: deltaSeconds }, "*");
+}
+
+// Pause and nudge by one frame. dir = -1 (back) or 1 (forward). Handled in injected.js.
+function frameStep(dir) {
+  ensureInjected();
+  window.postMessage({ source: "nf-companion", type: "frameStep", dir: dir }, "*");
+}
+
+// Set playback rate (0.1–4). Handled in injected.js (main world).
+function setSpeed(rate) {
+  ensureInjected();
+  window.postMessage({ source: "nf-companion", type: "setSpeed", rate: rate }, "*");
+}
+
+// Set volume boost multiplier (1–5). Handled in injected.js.
+function setVolume(boost) {
+  ensureInjected();
+  window.postMessage({ source: "nf-companion", type: "setVolume", boost: boost }, "*");
+}
+
+// Enable/disable the audio normalizer (compressor). Handled in injected.js.
+function setNormalizer(on) {
+  ensureInjected();
+  window.postMessage({ source: "nf-companion", type: "setNormalizer", on: on }, "*");
+}
+
+// Brief centered on-screen toast (used by speed shortcuts). Auto-removes.
+let toastEl = null;
+let toastTimer = null;
+function showToast(text) {
+  if (!toastEl) {
+    toastEl = document.createElement("div");
+    toastEl.style.cssText =
+      "position:fixed;top:12%;left:50%;transform:translateX(-50%);z-index:2147483647;" +
+      "background:rgba(0,0,0,0.8);color:#fff;font-family:sans-serif;font-size:22px;" +
+      "font-weight:700;padding:10px 18px;border-radius:6px;pointer-events:none;" +
+      "transition:opacity 0.2s;opacity:0;";
+    document.documentElement.appendChild(toastEl);
+  }
+  toastEl.textContent = text;
+  toastEl.style.opacity = "1";
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    if (toastEl) toastEl.style.opacity = "0";
+  }, 800);
 }
 
 async function togglePip(btn) {
@@ -117,11 +166,13 @@ async function togglePip(btn) {
   } catch (err) {
     // PiP can be blocked by DRM/browser policy. Flash the button to signal failure.
     console.log("[netflix-companion] PiP failed", err);
-    const prev = btn.style.color;
-    btn.style.color = "#e50914";
-    setTimeout(() => {
-      btn.style.color = prev;
-    }, 600);
+    if (btn) {
+      const prev = btn.style.color;
+      btn.style.color = "#e50914";
+      setTimeout(() => {
+        btn.style.color = prev;
+      }, 600);
+    }
   }
 }
 
@@ -132,6 +183,7 @@ async function togglePip(btn) {
 // loop (runaway CPU/memory, and Netflix's control bar never gets to render).
 const CONTROL_IDS = {
   show5sButtons: ["nf-back5", "nf-fwd5"],
+  show90sButtons: ["nf-back90", "nf-fwd90"],
   showPipButton: ["nf-pip"],
 };
 
@@ -166,7 +218,7 @@ function nativeWrapper(group, uia) {
 // badge. Cloning the 10s button gives us its exact inner structure (button > div > svg)
 // and CSS sizing for free; we only replace the SVG path so it doesn't read "10".
 // Returns the cloned WRAPPER ready to insert, or null if the native button is missing.
-function cloneNativeSeek(group, sourceUia, nfId, label, iconKey, onClick) {
+function cloneNativeSeek(group, sourceUia, nfId, label, iconKey, badgeText, onClick) {
   const src = group.querySelector(`[data-uia="${sourceUia}"]`);
   if (!src || !src.parentElement) return null;
   const wrap = src.parentElement.cloneNode(true);
@@ -201,8 +253,8 @@ function cloneNativeSeek(group, sourceUia, nfId, label, iconKey, onClick) {
   // React click listeners are NOT cloned, so the clone is inert until we attach ours.
   btn.addEventListener("click", onClick);
 
-  // Overlay a "5" badge so it reads as 5s vs the native 10s icon.
-  btn.appendChild(makeSeekLabel(5));
+  // Overlay the seconds badge so it reads distinct from the native 10s icon.
+  btn.appendChild(makeSeekLabel(badgeText));
   return wrap;
 }
 
@@ -262,16 +314,31 @@ function injectControls(settings) {
   if (settings.show5sButtons) {
     ensureInjected(); // load the main-world seek helper before the user can click
     const backWrap = cloneNativeSeek(
-      group, "control-back10", "nf-back5", "Rewind 5 seconds", "rewind5",
+      group, "control-back10", "nf-back5", "Rewind 5 seconds", "rewind5", "5",
       () => seek(-5)
     );
     if (backWrap) placeButtonWithSpacing(backWrap);
 
     const fwdWrap = cloneNativeSeek(
-      group, "control-forward10", "nf-fwd5", "Forward 5 seconds", "forward5",
+      group, "control-forward10", "nf-fwd5", "Forward 5 seconds", "forward5", "5",
       () => seek(5)
     );
     if (fwdWrap) placeButtonWithSpacing(fwdWrap);
+  }
+
+  if (settings.show90sButtons) {
+    ensureInjected();
+    const back90 = cloneNativeSeek(
+      group, "control-back10", "nf-back90", "Rewind 90 seconds", "rewind5", "90",
+      () => seek(-90)
+    );
+    if (back90) placeButtonWithSpacing(back90);
+
+    const fwd90 = cloneNativeSeek(
+      group, "control-forward10", "nf-fwd90", "Forward 90 seconds", "forward5", "90",
+      () => seek(90)
+    );
+    if (fwd90) placeButtonWithSpacing(fwd90);
   }
 
   if (settings.showPipButton) {
