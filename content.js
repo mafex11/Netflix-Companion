@@ -1,4 +1,4 @@
-// Netflix Auto-Skip — content script
+// Netflix Companion — content script
 
 const SELECTORS = {
   skipIntro: ['[data-uia="player-skip-intro"]'],

@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Netflix Auto-Skip",
+  "name": "Netflix Companion",
   "version": "1.1.0",
   "description": "Auto-skips Netflix intros, recaps & prompts, plus 5s seek and picture-in-picture buttons.",
   "permissions": ["storage"],
@@ -24,7 +24,7 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Netflix Auto-Skip",
+    "default_title": "Netflix Companion",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",

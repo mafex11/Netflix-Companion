@@ -1,8 +1,8 @@
-# Netflix Auto-Skip
+# Netflix Companion
 
-A tiny Chrome extension that silently clicks Netflix's **Skip Intro**, **Skip Recap**, **Next Episode**, and **Are You Still Watching?** buttons so your binge never breaks rhythm.
+A lightweight Chrome extension that supercharges the Netflix player: auto-skips **Skip Intro**, **Skip Recap**, **Next Episode**, and **Are You Still Watching?**, and adds **5-second seek** and **Picture-in-Picture** buttons right in the player bar.
 
-No accounts. No servers. No tracking. ~80 lines of glue code.
+No accounts. No servers. No tracking.
 
 ---
 
