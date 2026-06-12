@@ -1,5 +1,9 @@
 # Netflix Companion
 
+<p align="center">
+  <img src="docs/media/launch.gif" alt="Netflix Companion — launch" width="100%" />
+</p>
+
 A lightweight Chrome extension that turns Netflix into a power-user's player: auto-skips intros, recaps, next-episode prompts, and "Are You Still Watching?", and adds seek buttons, picture-in-picture, frame-step, playback speed, volume boost, and keyboard shortcuts — all in the native player.
 
 No accounts. No servers. No tracking.
