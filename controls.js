@@ -105,7 +105,14 @@ function ensureInjected() {
 
 function seek(deltaSeconds) {
   // Hand the seek to the main-world script, which calls Netflix's player API.
+  ensureInjected();
   window.postMessage({ source: "nf-companion", type: "seek", delta: deltaSeconds }, "*");
+}
+
+// Pause and nudge by one frame. dir = -1 (back) or 1 (forward). Handled in injected.js.
+function frameStep(dir) {
+  ensureInjected();
+  window.postMessage({ source: "nf-companion", type: "frameStep", dir: dir }, "*");
 }
 
 async function togglePip(btn) {
@@ -120,11 +127,13 @@ async function togglePip(btn) {
   } catch (err) {
     // PiP can be blocked by DRM/browser policy. Flash the button to signal failure.
     console.log("[netflix-companion] PiP failed", err);
-    const prev = btn.style.color;
-    btn.style.color = "#e50914";
-    setTimeout(() => {
-      btn.style.color = prev;
-    }, 600);
+    if (btn) {
+      const prev = btn.style.color;
+      btn.style.color = "#e50914";
+      setTimeout(() => {
+        btn.style.color = prev;
+      }, 600);
+    }
   }
 }
 

@@ -40,10 +40,29 @@
     player.seek(target);
   }
 
+  // Assumed frame rate. Netflix has no public frame API, so frame-step seeks by one
+  // frame's worth of time. Most Netflix content is 24fps; this is approximate and may
+  // not land on an exact encoded frame boundary.
+  const FPS = 24;
+
+  function frameStepBy(dir) {
+    const player = getNetflixPlayer();
+    if (!player) {
+      console.log("[netflix-companion/main] frameStep failed: no player");
+      return;
+    }
+    if (typeof player.pause === "function") player.pause();
+    const current = player.getCurrentTime(); // milliseconds
+    // Use the same inverted convention as seekBy so direction matches the seek buttons.
+    const target = Math.max(0, current - dir * (1000 / FPS));
+    player.seek(target);
+  }
+
   window.addEventListener("message", (event) => {
     if (event.source !== window) return;
     const data = event.data;
     if (!data || data.source !== "nf-companion") return;
     if (data.type === "seek") seekBy(data.delta);
+    else if (data.type === "frameStep") frameStepBy(data.dir);
   });
 })();
