@@ -65,6 +65,40 @@ function getVideo() {
   return document.querySelector("video");
 }
 
+// One-time structural dump of the control bar so we can see Netflix's real DOM layout.
+// Prints a compact outline (tag.class[data-uia]) instead of full HTML to avoid flooding
+// the console. Guarded by `dumped` so it only runs once per page load.
+let dumped = false;
+function describe(el) {
+  if (!el || el.nodeType !== 1) return String(el && el.nodeName);
+  const cls = (el.className && typeof el.className === "string")
+    ? "." + el.className.trim().split(/\s+/).join(".")
+    : "";
+  const uia = el.getAttribute && el.getAttribute("data-uia");
+  return el.tagName.toLowerCase() + cls + (uia ? `[data-uia="${uia}"]` : "");
+}
+function dumpControlBar() {
+  if (dumped) return;
+  const bar = document.querySelector('[data-uia="controls-standard"]');
+  if (!bar) {
+    console.log("[netflix-companion] DUMP: no [data-uia=controls-standard] found");
+    return;
+  }
+  dumped = true;
+  console.log("[netflix-companion] === CONTROL BAR DUMP ===");
+  console.log("bar:", describe(bar), "| childNodes:", bar.childNodes.length);
+  // Walk up to 3 levels deep, listing each element child.
+  function walk(el, depth) {
+    if (depth > 3) return;
+    Array.from(el.children).forEach((child, i) => {
+      console.log("  ".repeat(depth) + i + " " + describe(child));
+      walk(child, depth + 1);
+    });
+  }
+  walk(bar, 1);
+  console.log("[netflix-companion] === END DUMP ===");
+}
+
 // Find the native left-cluster button row, and a template button to clone styling from.
 // Returns { cluster, template } or null if the control bar isn't present yet.
 function findControlCluster() {
@@ -156,6 +190,9 @@ function injectControls(settings) {
   const found = findControlCluster();
   if (!found) return;
   const { cluster, template } = found;
+
+  // One-time: dump the real control-bar structure for debugging insertion point.
+  dumpControlBar();
 
   // Fast path: nothing to do. Pure read — does not mutate the DOM.
   if (controlsInDesiredState(cluster, settings)) return;
