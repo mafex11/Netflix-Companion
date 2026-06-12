@@ -6,6 +6,9 @@ const DEFAULTS = {
   show5sButtons: true,
   show90sButtons: true,
   showPipButton: true,
+  playbackSpeed: 1,
+  volumeBoost: 1,
+  normalizer: false,
   count: 0,
 };
 
