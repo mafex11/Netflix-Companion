@@ -60,6 +60,7 @@ let speedIndex = 0;
 // Count of times we actually mutated the control bar. If this climbs without bound
 // while the video sits still, the injection is self-triggering the observer (a bug).
 let injectionCount = 0;
+let layoutDumped = false;
 
 function getVideo() {
   return document.querySelector("video");
@@ -261,4 +262,36 @@ function injectControls(settings) {
 
   injectionCount += 1;
   console.log("[netflix-companion] injected controls (mutation #" + injectionCount + ")");
+
+  // One-time layout diagnostics: compare the row's flex behavior and a native button's
+  // box against ours, so we can see WHY our buttons wrap to a second line.
+  if (!layoutDumped) {
+    layoutDumped = true;
+    const rs = getComputedStyle(row);
+    console.log("[netflix-companion] ROW style:",
+      "display=" + rs.display,
+      "flexWrap=" + rs.flexWrap,
+      "flexDirection=" + rs.flexDirection,
+      "alignItems=" + rs.alignItems,
+      "width=" + rs.width,
+      "gap=" + rs.gap);
+    const nativeBtn = row.querySelector('[data-uia="control-back10"]');
+    const ourBtn = row.querySelector(`.${MARK}`);
+    if (nativeBtn) {
+      const r = nativeBtn.getBoundingClientRect();
+      const cs = getComputedStyle(nativeBtn);
+      console.log("[netflix-companion] NATIVE back10:",
+        "w=" + Math.round(r.width), "h=" + Math.round(r.height),
+        "display=" + cs.display, "margin=" + cs.margin, "padding=" + cs.padding,
+        "class=" + nativeBtn.className);
+    }
+    if (ourBtn) {
+      const r = ourBtn.getBoundingClientRect();
+      const cs = getComputedStyle(ourBtn);
+      console.log("[netflix-companion] OURS:",
+        "w=" + Math.round(r.width), "h=" + Math.round(r.height),
+        "display=" + cs.display, "margin=" + cs.margin, "padding=" + cs.padding,
+        "class=" + ourBtn.className);
+    }
+  }
 }
