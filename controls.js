@@ -53,3 +53,110 @@ function makeSeekLabel(seconds) {
     "font-size:9px;font-weight:700;pointer-events:none;";
   return span;
 }
+
+// Track current speed index so the cycle button advances predictably.
+let speedIndex = 0;
+
+function getVideo() {
+  return document.querySelector("video");
+}
+
+// Find the native left-cluster button row, and a template button to clone styling from.
+// Returns { cluster, template } or null if the control bar isn't present yet.
+function findControlCluster() {
+  const bar = document.querySelector('[data-uia="controls-standard"]');
+  if (!bar || !bar.firstChild) return null;
+  const cluster = bar.firstChild;
+  // The first child element of the cluster is a real Netflix control button — clone its style.
+  const template = cluster.querySelector("button");
+  if (!template) return null;
+  return { cluster, template };
+}
+
+function seek(deltaSeconds) {
+  const video = getVideo();
+  if (!video) return;
+  video.currentTime = Math.max(0, video.currentTime + deltaSeconds);
+}
+
+function cycleSpeed(btn) {
+  const video = getVideo();
+  if (!video) return;
+  speedIndex = (speedIndex + 1) % SPEED_PRESETS.length;
+  const rate = SPEED_PRESETS[speedIndex];
+  video.playbackRate = rate;
+  updateSpeedLabel(btn, rate);
+}
+
+function updateSpeedLabel(btn, rate) {
+  const label = btn.querySelector(".nf-speed-label");
+  if (label) label.textContent = rate === 1 ? "1x" : `${rate}x`;
+}
+
+async function togglePip(btn) {
+  const video = getVideo();
+  if (!video) return;
+  try {
+    if (document.pictureInPictureElement) {
+      await document.exitPictureInPicture();
+    } else {
+      await video.requestPictureInPicture();
+    }
+  } catch (err) {
+    // PiP can be blocked by DRM/browser policy. Flash the button to signal failure.
+    console.log("[netflix-companion] PiP failed", err);
+    const prev = btn.style.color;
+    btn.style.color = "#e50914";
+    setTimeout(() => {
+      btn.style.color = prev;
+    }, 600);
+  }
+}
+
+// Inject all enabled buttons into the control bar. Idempotent: removes our previous
+// buttons first, then re-adds according to current settings. Safe to call on every
+// observer tick.
+function injectControls(settings) {
+  const found = findControlCluster();
+  if (!found) return;
+  const { cluster, template } = found;
+
+  // Remove any of our previously-injected buttons so toggles take effect live and
+  // we never double-insert when Netflix re-renders the bar.
+  cluster.querySelectorAll(`.${MARK}`).forEach((el) => el.remove());
+
+  if (settings.show5sButtons) {
+    const back = makeButton(template, "Rewind 5 seconds", makeIcon("rewind5"));
+    back.style.position = "relative";
+    back.appendChild(makeSeekLabel(5));
+    back.addEventListener("click", () => seek(-5));
+
+    const fwd = makeButton(template, "Forward 5 seconds", makeIcon("forward5"));
+    fwd.style.position = "relative";
+    fwd.appendChild(makeSeekLabel(5));
+    fwd.addEventListener("click", () => seek(5));
+
+    // Insert the 5s buttons right after the play/pause button (cluster's first button).
+    const anchor = cluster.querySelector("button");
+    anchor.insertAdjacentElement("afterend", fwd);
+    anchor.insertAdjacentElement("afterend", back);
+  }
+
+  if (settings.showSpeedButton) {
+    const speedInner = document.createElement("span");
+    speedInner.className = "nf-speed-label";
+    speedInner.style.cssText = "font-size:13px;font-weight:700;";
+    const video = getVideo();
+    const currentRate = video ? video.playbackRate : 1;
+    speedInner.textContent = currentRate === 1 ? "1x" : `${currentRate}x`;
+    const speedBtn = makeButton(template, "Playback speed", speedInner);
+    speedBtn.addEventListener("click", () => cycleSpeed(speedBtn));
+    cluster.appendChild(speedBtn);
+  }
+
+  if (settings.showPipButton) {
+    const pipBtn = makeButton(template, "Picture in picture", makeIcon("pip"));
+    pipBtn.addEventListener("click", () => togglePip(pipBtn));
+    cluster.appendChild(pipBtn);
+  }
+}
