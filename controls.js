@@ -30,12 +30,13 @@ function makeButton(templateButton, label, inner) {
   return btn;
 }
 
-// Build an SVG icon element from a path key in ICONS.
+// Build an SVG icon element from a path key in ICONS. Sized to fill a native 44x44
+// control button (the path scales from the 24x24 viewBox).
 function makeIcon(pathKey) {
   const ns = "http://www.w3.org/2000/svg";
   const svg = document.createElementNS(ns, "svg");
-  svg.setAttribute("width", "24");
-  svg.setAttribute("height", "24");
+  svg.setAttribute("width", "44");
+  svg.setAttribute("height", "44");
   svg.setAttribute("viewBox", "0 0 24 24");
   svg.setAttribute("fill", "currentColor");
   const path = document.createElementNS(ns, "path");
@@ -44,13 +45,26 @@ function makeIcon(pathKey) {
   return svg;
 }
 
+// Marker class for the wrapper divs we clone around each button.
+const WRAP_MARK = "nf-companion-wrap";
+
+// Wrap a button in a clone of a native button-wrapper div so it sits in the flex row
+// exactly like a native control (each native button lives in its own w=52 wrapper).
+function makeWrapper(wrapperTemplate, buttonEl) {
+  const wrap = document.createElement("div");
+  wrap.className = wrapperTemplate.className;
+  wrap.classList.add(WRAP_MARK);
+  wrap.appendChild(buttonEl);
+  return wrap;
+}
+
 // Build a "5" badge overlay element for the seek buttons (so 5s reads distinct from 10s).
 function makeSeekLabel(seconds) {
   const span = document.createElement("span");
   span.textContent = String(seconds);
   span.style.cssText =
-    "position:absolute;bottom:6px;left:50%;transform:translateX(-50%);" +
-    "font-size:9px;font-weight:700;pointer-events:none;";
+    "position:absolute;bottom:11px;left:50%;transform:translateX(-50%);" +
+    "font-size:10px;font-weight:700;pointer-events:none;";
   return span;
 }
 
@@ -120,16 +134,19 @@ function dumpControlBar() {
   console.log("[netflix-companion] === END TREE ===");
 }
 
-// Find the native button row and a template button to clone styling from.
-// Netflix puts all control buttons (play-pause, back10, forward10, volume, …,
-// fullscreen) as siblings in one flat row — that row is the play-pause button's
-// parent. We anchor to the play-pause button (always present) rather than to
-// bar.firstChild, which is an outer wrapper that also contains the timeline scrubber.
-// Returns { row, template } or null if the control bar isn't present yet.
+// Find the native button group and templates to clone.
+// Structure (confirmed via DOM dump): each native control button lives inside its OWN
+// wrapper div (~52px wide), and those wrappers are flex children of a "group" div that
+// holds play / back10 / forward10 / volume on the left. We must insert our buttons as
+// sibling WRAPPERS in that group — appending into the play button's own wrapper makes
+// them stack vertically (the wrapper is display:block, 52px wide).
+// Returns { group, wrapperTemplate, buttonTemplate } or null if not ready.
 function findControlCluster() {
   const playPause = document.querySelector('[data-uia^="control-play-pause"]');
-  if (!playPause || !playPause.parentElement) return null;
-  return { row: playPause.parentElement, template: playPause };
+  const wrapperTemplate = playPause && playPause.parentElement; // the ~52px wrapper div
+  const group = wrapperTemplate && wrapperTemplate.parentElement; // flex row of wrappers
+  if (!playPause || !wrapperTemplate || !group) return null;
+  return { group, wrapperTemplate, buttonTemplate: playPause };
 }
 
 function seek(deltaSeconds) {
@@ -193,83 +210,96 @@ function desiredIds(settings) {
 }
 
 // Read-only check: are exactly the desired buttons present, no more, no fewer?
-function controlsInDesiredState(row, settings) {
+function controlsInDesiredState(group, settings) {
   const want = desiredIds(settings);
   const have = new Set(
-    Array.from(row.querySelectorAll(`.${MARK}`)).map((el) => el.dataset.nfControl)
+    Array.from(group.querySelectorAll(`.${MARK}`)).map((el) => el.dataset.nfControl)
   );
   if (want.size !== have.size) return false;
   for (const id of want) if (!have.has(id)) return false;
   return true;
 }
 
+// Return the wrapper div that holds a native button (its immediate parent).
+function nativeWrapper(group, uia) {
+  const btn = group.querySelector(`[data-uia="${uia}"]`);
+  return btn ? btn.parentElement : null;
+}
+
 // Inject/sync our buttons into the control bar. This runs on every observer tick, so
 // the fast path is a pure READ: if the buttons already match the desired state we
 // return without touching the DOM (no self-trigger, no loop). We only mutate when the
 // state is wrong (first injection, a toggle changed, or Netflix re-rendered the bar).
+//
+// Each native button lives in its own wrapper div inside `group` (a flex row). We mirror
+// that: wrap each of our buttons in a clone of a native wrapper and insert THAT wrapper
+// as a sibling of the native wrappers — never append a bare button into another button's
+// wrapper (that stacks them vertically).
 function injectControls(settings) {
   const found = findControlCluster();
   if (!found) return;
-  const { row, template } = found;
+  const { group, wrapperTemplate, buttonTemplate } = found;
 
   // Fast path: nothing to do. Pure read — does not mutate the DOM.
-  if (controlsInDesiredState(row, settings)) return;
+  if (controlsInDesiredState(group, settings)) return;
 
-  // State is wrong — rebuild our buttons. Remove ours first, then re-add.
-  row.querySelectorAll(`.${MARK}`).forEach((el) => el.remove());
+  // State is wrong — rebuild. Remove our previous wrappers (and any stray buttons).
+  group.querySelectorAll(`.${WRAP_MARK}`).forEach((el) => el.remove());
+  group.querySelectorAll(`.${MARK}`).forEach((el) => el.remove());
 
-  // Native sibling anchors (all live in the same flat row).
-  const back10 = row.querySelector('[data-uia="control-back10"]');
-  const forward10 = row.querySelector('[data-uia="control-forward10"]');
+  const back10Wrap = nativeWrapper(group, "control-back10");
+  const forward10Wrap = nativeWrapper(group, "control-forward10");
 
   if (settings.show5sButtons) {
-    const back = makeButton(template, "Rewind 5 seconds", makeIcon("rewind5"));
+    const back = makeButton(buttonTemplate, "Rewind 5 seconds", makeIcon("rewind5"));
     back.dataset.nfControl = "nf-back5";
     back.style.position = "relative";
     back.appendChild(makeSeekLabel(5));
     back.addEventListener("click", () => seek(-5));
+    const backWrap = makeWrapper(wrapperTemplate, back);
 
-    const fwd = makeButton(template, "Forward 5 seconds", makeIcon("forward5"));
+    const fwd = makeButton(buttonTemplate, "Forward 5 seconds", makeIcon("forward5"));
     fwd.dataset.nfControl = "nf-fwd5";
     fwd.style.position = "relative";
     fwd.appendChild(makeSeekLabel(5));
     fwd.addEventListener("click", () => seek(5));
+    const fwdWrap = makeWrapper(wrapperTemplate, fwd);
 
-    // Place 5s rewind just before native 10s rewind; 5s forward just after 10s forward.
-    if (back10) back10.insertAdjacentElement("beforebegin", back);
-    else row.appendChild(back);
-    if (forward10) forward10.insertAdjacentElement("afterend", fwd);
-    else row.appendChild(fwd);
+    // 5s rewind wrapper just before native 10s rewind; 5s forward just after 10s forward.
+    if (back10Wrap) back10Wrap.insertAdjacentElement("beforebegin", backWrap);
+    else group.appendChild(backWrap);
+    if (forward10Wrap) forward10Wrap.insertAdjacentElement("afterend", fwdWrap);
+    else group.appendChild(fwdWrap);
   }
 
   if (settings.showPipButton) {
-    const pipBtn = makeButton(template, "Picture in picture", makeIcon("pip"));
+    const pipBtn = makeButton(buttonTemplate, "Picture in picture", makeIcon("pip"));
     pipBtn.dataset.nfControl = "nf-pip";
     pipBtn.addEventListener("click", () => togglePip(pipBtn));
-    // Place PiP just after our 5s forward button if present, else after native 10s forward.
-    const fwdAnchor = row.querySelector('[data-nf-control="nf-fwd5"]') || forward10;
-    if (fwdAnchor) fwdAnchor.insertAdjacentElement("afterend", pipBtn);
-    else row.appendChild(pipBtn);
+    const pipWrap = makeWrapper(wrapperTemplate, pipBtn);
+    // After our 5s-forward wrapper if present, else after native 10s forward.
+    const anchorWrap =
+      (group.querySelector('[data-nf-control="nf-fwd5"]') || {}).parentElement ||
+      forward10Wrap;
+    if (anchorWrap) anchorWrap.insertAdjacentElement("afterend", pipWrap);
+    else group.appendChild(pipWrap);
   }
 
   if (settings.showSpeedButton) {
     const speedInner = document.createElement("span");
     speedInner.className = "nf-speed-label";
-    speedInner.style.cssText = "font-size:13px;font-weight:700;";
+    speedInner.style.cssText = "font-size:15px;font-weight:700;";
     const video = getVideo();
     const currentRate = video ? video.playbackRate : 1;
     speedInner.textContent = currentRate === 1 ? "1x" : `${currentRate}x`;
-    const speedBtn = makeButton(template, "Playback speed", speedInner);
+    const speedBtn = makeButton(buttonTemplate, "Playback speed", speedInner);
     speedBtn.dataset.nfControl = "nf-speed";
     speedBtn.addEventListener("click", () => cycleSpeed(speedBtn));
-    // Append speed at the end of the row (near native speed/fullscreen controls).
-    row.appendChild(speedBtn);
+    const speedWrap = makeWrapper(wrapperTemplate, speedBtn);
+    // Append at the end of the left group (after volume / our other buttons).
+    group.appendChild(speedWrap);
   }
 
   injectionCount += 1;
   console.log("[netflix-companion] injected controls (mutation #" + injectionCount + ")");
-
-  // One-time: dump the FULL tree AFTER injection so we see exactly where our buttons
-  // (marked >>>) landed relative to native controls, with geometry.
-  dumpControlBar();
 }
