@@ -87,6 +87,86 @@
     applyRate();
   }
 
+  // ---- Volume boost + normalizer -------------------------------------------
+  // Route the video's audio through GainNode (boost) and a bypassable
+  // DynamicsCompressorNode (normalizer). createMediaElementSource can only be called
+  // ONCE per element, so cache the graph and rebuild only when the element changes.
+  let audioGraph = null; // { element, ctx, source, gain, compressor, compressorActive }
+  let desiredBoost = 1;
+  let normalizerOn = false;
+
+  function buildGraph(video) {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      const ctx = new AC();
+      const source = ctx.createMediaElementSource(video);
+      const gain = ctx.createGain();
+      const compressor = ctx.createDynamicsCompressor();
+      // Gentle "normalizer" compression: tame loud peaks, lift the rest.
+      compressor.threshold.value = -24;
+      compressor.knee.value = 30;
+      compressor.ratio.value = 12;
+      compressor.attack.value = 0.003;
+      compressor.release.value = 0.25;
+      return { element: video, ctx, source, gain, compressor, compressorActive: null };
+    } catch (e) {
+      console.log("[netflix-companion/main] audio graph init failed", e);
+      return null;
+    }
+  }
+
+  // (Re)connect the graph for the current routing (with/without compressor).
+  function wireGraph(g) {
+    try {
+      g.source.disconnect();
+      g.gain.disconnect();
+      g.compressor.disconnect();
+    } catch (e) {
+      // disconnect on a never-connected node is harmless
+    }
+    if (normalizerOn) {
+      g.source.connect(g.gain);
+      g.gain.connect(g.compressor);
+      g.compressor.connect(g.ctx.destination);
+    } else {
+      g.source.connect(g.gain);
+      g.gain.connect(g.ctx.destination);
+    }
+    g.compressorActive = normalizerOn;
+  }
+
+  function ensureGraph() {
+    const video = document.querySelector("video");
+    if (!video) return null;
+    if (audioGraph && audioGraph.element === video) return audioGraph;
+    // New (or first) element: build a fresh graph. The old source is dead once the
+    // element is gone; we simply replace our cache.
+    const g = buildGraph(video);
+    if (!g) return null;
+    audioGraph = g;
+    wireGraph(g);
+    return g;
+  }
+
+  function applyAudio() {
+    const g = ensureGraph();
+    if (!g) return;
+    if (g.ctx.state === "suspended") g.ctx.resume();
+    g.gain.gain.value = desiredBoost;
+    if (g.compressorActive !== normalizerOn) wireGraph(g);
+  }
+
+  function setVolume(boost) {
+    desiredBoost = Math.min(5, Math.max(1, Number(boost) || 1));
+    applyAudio();
+  }
+
+  function setNormalizer(on) {
+    normalizerOn = !!on;
+    applyAudio();
+  }
+
   window.addEventListener("message", (event) => {
     if (event.source !== window) return;
     const data = event.data;
@@ -94,5 +174,7 @@
     if (data.type === "seek") seekBy(data.delta);
     else if (data.type === "frameStep") frameStepBy(data.dir);
     else if (data.type === "setSpeed") setSpeed(data.rate);
+    else if (data.type === "setVolume") setVolume(data.boost);
+    else if (data.type === "setNormalizer") setNormalizer(data.on);
   });
 })();
