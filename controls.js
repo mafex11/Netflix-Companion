@@ -2,8 +2,6 @@
 // Injects 5s seek, speed-cycle, and PiP buttons into Netflix's native control bar.
 // All buttons clone an existing native button's classes so they inherit Netflix styling.
 
-const SPEED_PRESETS = [1, 1.25, 1.5, 2];
-
 // Marker class so we never inject our buttons twice and can find them later.
 const MARK = "nf-companion-btn";
 
@@ -68,70 +66,8 @@ function makeSeekLabel(seconds) {
   return span;
 }
 
-// Track current speed index so the cycle button advances predictably.
-let speedIndex = 0;
-
-// Count of times we actually mutated the control bar. If this climbs without bound
-// while the video sits still, the injection is self-triggering the observer (a bug).
-let injectionCount = 0;
-
 function getVideo() {
   return document.querySelector("video");
-}
-
-// One-time structural dump of the control bar so we can see Netflix's real DOM layout.
-// Prints a compact outline (tag.class[data-uia]) instead of full HTML to avoid flooding
-// the console. Guarded by `dumped` so it only runs once per page load.
-let dumped = false;
-function describe(el) {
-  if (!el || el.nodeType !== 1) return String(el && el.nodeName);
-  const cls = (el.className && typeof el.className === "string")
-    ? "." + el.className.trim().split(/\s+/).join(".")
-    : "";
-  const uia = el.getAttribute && el.getAttribute("data-uia");
-  return el.tagName.toLowerCase() + cls + (uia ? `[data-uia="${uia}"]` : "");
-}
-// Compact geometry + layout summary for one element.
-function geom(el) {
-  const r = el.getBoundingClientRect();
-  const cs = getComputedStyle(el);
-  const flexBits = cs.display.includes("flex")
-    ? ` dir=${cs.flexDirection} wrap=${cs.flexWrap}`
-    : "";
-  return (
-    `box[x=${Math.round(r.x)} y=${Math.round(r.y)} w=${Math.round(r.width)} h=${Math.round(r.height)}]` +
-    ` display=${cs.display}${flexBits} pos=${cs.position}`
-  );
-}
-
-function dumpControlBar() {
-  if (dumped) return;
-  const bar = document.querySelector('[data-uia="controls-standard"]');
-  if (!bar) {
-    console.log("[netflix-companion] DUMP: no [data-uia=controls-standard] found");
-    return;
-  }
-  dumped = true;
-  console.log("[netflix-companion] === FULL CONTROL BAR TREE ===");
-
-  // Recursive tree dump: every element under the bar, with indent, identity, and geometry.
-  // Mark our own injected buttons with >>> so we can see exactly where they landed.
-  function walk(el, depth) {
-    const isOurs = el.classList && el.classList.contains(MARK);
-    const tag = el.tagName ? el.tagName.toLowerCase() : "?";
-    const uia = el.getAttribute && el.getAttribute("data-uia");
-    const aria = el.getAttribute && el.getAttribute("aria-label");
-    const nfc = el.dataset && el.dataset.nfControl;
-    const label =
-      tag +
-      (uia ? `[data-uia="${uia}"]` : "") +
-      (nfc ? `{nf:${nfc}}` : "") +
-      (aria ? ` aria="${aria}"` : "");
-    console.log((isOurs ? ">>> " : "    ") + "  ".repeat(depth) + label + "  " + geom(el));
-    Array.from(el.children).forEach((child) => walk(child, depth + 1));
-  }
-  walk(bar, 0);
-  console.log("[netflix-companion] === END TREE ===");
 }
 
 // Find the native button group and templates to clone.
@@ -153,20 +89,6 @@ function seek(deltaSeconds) {
   const video = getVideo();
   if (!video) return;
   video.currentTime = Math.max(0, video.currentTime + deltaSeconds);
-}
-
-function cycleSpeed(btn) {
-  const video = getVideo();
-  if (!video) return;
-  speedIndex = (speedIndex + 1) % SPEED_PRESETS.length;
-  const rate = SPEED_PRESETS[speedIndex];
-  video.playbackRate = rate;
-  updateSpeedLabel(btn, rate);
-}
-
-function updateSpeedLabel(btn, rate) {
-  const label = btn.querySelector(".nf-speed-label");
-  if (label) label.textContent = rate === 1 ? "1x" : `${rate}x`;
 }
 
 async function togglePip(btn) {
@@ -196,7 +118,6 @@ async function togglePip(btn) {
 // loop (runaway CPU/memory, and Netflix's control bar never gets to render).
 const CONTROL_IDS = {
   show5sButtons: ["nf-back5", "nf-fwd5"],
-  showSpeedButton: ["nf-speed"],
   showPipButton: ["nf-pip"],
 };
 
@@ -247,8 +168,17 @@ function injectControls(settings) {
   group.querySelectorAll(`.${WRAP_MARK}`).forEach((el) => el.remove());
   group.querySelectorAll(`.${MARK}`).forEach((el) => el.remove());
 
-  const back10Wrap = nativeWrapper(group, "control-back10");
   const forward10Wrap = nativeWrapper(group, "control-forward10");
+
+  // Insert our buttons as a contiguous block AFTER the native 10s forward button, so the
+  // 5s controls stay visually distinct from Netflix's 10s controls. We keep a moving
+  // anchor: each new wrapper goes right after the previous one.
+  let anchorWrap = forward10Wrap;
+  function placeAfterAnchor(wrap) {
+    if (anchorWrap) anchorWrap.insertAdjacentElement("afterend", wrap);
+    else group.appendChild(wrap);
+    anchorWrap = wrap;
+  }
 
   if (settings.show5sButtons) {
     const back = makeButton(buttonTemplate, "Rewind 5 seconds", makeIcon("rewind5"));
@@ -256,50 +186,20 @@ function injectControls(settings) {
     back.style.position = "relative";
     back.appendChild(makeSeekLabel(5));
     back.addEventListener("click", () => seek(-5));
-    const backWrap = makeWrapper(wrapperTemplate, back);
+    placeAfterAnchor(makeWrapper(wrapperTemplate, back));
 
     const fwd = makeButton(buttonTemplate, "Forward 5 seconds", makeIcon("forward5"));
     fwd.dataset.nfControl = "nf-fwd5";
     fwd.style.position = "relative";
     fwd.appendChild(makeSeekLabel(5));
     fwd.addEventListener("click", () => seek(5));
-    const fwdWrap = makeWrapper(wrapperTemplate, fwd);
-
-    // 5s rewind wrapper just before native 10s rewind; 5s forward just after 10s forward.
-    if (back10Wrap) back10Wrap.insertAdjacentElement("beforebegin", backWrap);
-    else group.appendChild(backWrap);
-    if (forward10Wrap) forward10Wrap.insertAdjacentElement("afterend", fwdWrap);
-    else group.appendChild(fwdWrap);
+    placeAfterAnchor(makeWrapper(wrapperTemplate, fwd));
   }
 
   if (settings.showPipButton) {
     const pipBtn = makeButton(buttonTemplate, "Picture in picture", makeIcon("pip"));
     pipBtn.dataset.nfControl = "nf-pip";
     pipBtn.addEventListener("click", () => togglePip(pipBtn));
-    const pipWrap = makeWrapper(wrapperTemplate, pipBtn);
-    // After our 5s-forward wrapper if present, else after native 10s forward.
-    const anchorWrap =
-      (group.querySelector('[data-nf-control="nf-fwd5"]') || {}).parentElement ||
-      forward10Wrap;
-    if (anchorWrap) anchorWrap.insertAdjacentElement("afterend", pipWrap);
-    else group.appendChild(pipWrap);
+    placeAfterAnchor(makeWrapper(wrapperTemplate, pipBtn));
   }
-
-  if (settings.showSpeedButton) {
-    const speedInner = document.createElement("span");
-    speedInner.className = "nf-speed-label";
-    speedInner.style.cssText = "font-size:15px;font-weight:700;";
-    const video = getVideo();
-    const currentRate = video ? video.playbackRate : 1;
-    speedInner.textContent = currentRate === 1 ? "1x" : `${currentRate}x`;
-    const speedBtn = makeButton(buttonTemplate, "Playback speed", speedInner);
-    speedBtn.dataset.nfControl = "nf-speed";
-    speedBtn.addEventListener("click", () => cycleSpeed(speedBtn));
-    const speedWrap = makeWrapper(wrapperTemplate, speedBtn);
-    // Append at the end of the left group (after volume / our other buttons).
-    group.appendChild(speedWrap);
-  }
-
-  injectionCount += 1;
-  console.log("[netflix-companion] injected controls (mutation #" + injectionCount + ")");
 }

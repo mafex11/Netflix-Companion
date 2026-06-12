@@ -15,8 +15,7 @@ No accounts. No servers. No tracking. ~80 lines of glue code.
 - **Per-channel toggles** — turn off what you don't want (e.g. leave intros on for shows where the opening is part of the experience)
 - **Skip counter** — running total displayed in the popup and as a badge on the toolbar icon. Click to reset.
 - **Settings sync** — your toggles travel with you across signed-in Chrome profiles
-- **5s Seek** — adds 5-second skip & rewind buttons beside Netflix's native 10s buttons
-- **Speed control** — a one-click button cycling 1x → 1.25x → 1.5x → 2x
+- **5s Seek** — adds a 5-second rewind & skip pair after Netflix's native 10s buttons
 - **Picture-in-Picture** — pop the video into a floating window with one click
 
 ## Install
@@ -61,7 +60,7 @@ The extension also injects extra buttons into Netflix's native control bar (`[da
 netflix-auto-skip/
 ├── manifest.json      Manifest V3 — permissions, content script, popup, service worker
 ├── content.js         Runs on netflix.com; observes DOM; clicks the buttons
-├── controls.js        Injects 5s seek, speed, and PiP buttons into the player bar
+├── controls.js        Injects 5s seek and PiP buttons into the player bar
 ├── background.js      Service worker — owns the skip-counter badge
 ├── popup.html         Popup UI (broadcast-deck aesthetic, custom flip switches)
 ├── popup.js           Reads/writes chrome.storage.sync; broadcasts changes to tabs

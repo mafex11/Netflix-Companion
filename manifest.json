@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Netflix Auto-Skip",
   "version": "1.1.0",
-  "description": "Auto-skips Netflix intros, recaps & prompts, plus 5s seek, speed control, and picture-in-picture buttons.",
+  "description": "Auto-skips Netflix intros, recaps & prompts, plus 5s seek and picture-in-picture buttons.",
   "permissions": ["storage"],
   "host_permissions": ["*://*.netflix.com/*"],
   "background": {
