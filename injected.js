@@ -58,11 +58,41 @@
     player.seek(target);
   }
 
+  // ---- Playback speed -------------------------------------------------------
+  // Set video.playbackRate directly (safe; only currentTime desyncs the player).
+  // Netflix resets the rate on segment/episode changes, so cache the desired value
+  // and re-assert it whenever the element fires ratechange.
+  let desiredRate = 1;
+  let rateGuardedEl = null;
+
+  function applyRate() {
+    const video = document.querySelector("video");
+    if (!video) return;
+    if (Math.abs(video.playbackRate - desiredRate) > 0.001) {
+      video.playbackRate = desiredRate;
+    }
+    // Attach a one-time ratechange guard per element so Netflix's resets get corrected.
+    if (rateGuardedEl !== video) {
+      rateGuardedEl = video;
+      video.addEventListener("ratechange", () => {
+        if (Math.abs(video.playbackRate - desiredRate) > 0.001) {
+          video.playbackRate = desiredRate;
+        }
+      });
+    }
+  }
+
+  function setSpeed(rate) {
+    desiredRate = Math.min(4, Math.max(0.1, Number(rate) || 1));
+    applyRate();
+  }
+
   window.addEventListener("message", (event) => {
     if (event.source !== window) return;
     const data = event.data;
     if (!data || data.source !== "nf-companion") return;
     if (data.type === "seek") seekBy(data.delta);
     else if (data.type === "frameStep") frameStepBy(data.dir);
+    else if (data.type === "setSpeed") setSpeed(data.rate);
   });
 })();
