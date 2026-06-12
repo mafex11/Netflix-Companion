@@ -33,7 +33,10 @@
       return;
     }
     const current = player.getCurrentTime(); // milliseconds
-    const target = Math.max(0, current + deltaSeconds * 1000);
+    // NOTE: observed behavior on Netflix's player is inverted relative to a naive
+    // current + delta — a negative delta seeks forward and vice-versa. Negate so the
+    // rewind (left) button goes back and the forward (right) button goes forward.
+    const target = Math.max(0, current - deltaSeconds * 1000);
     player.seek(target);
   }
 
