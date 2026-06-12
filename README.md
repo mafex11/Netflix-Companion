@@ -1,6 +1,6 @@
 # Netflix Companion
 
-A lightweight Chrome extension that supercharges the Netflix player: auto-skips **Skip Intro**, **Skip Recap**, **Next Episode**, and **Are You Still Watching?**, and adds **5-second seek** and **Picture-in-Picture** buttons right in the player bar.
+A lightweight Chrome extension that turns Netflix into a power-user's player: auto-skips intros, recaps, next-episode prompts, and "Are You Still Watching?", and adds seek buttons, picture-in-picture, frame-step, playback speed, volume boost, and keyboard shortcuts — all in the native player.
 
 No accounts. No servers. No tracking.
 
@@ -16,7 +16,12 @@ No accounts. No servers. No tracking.
 - **Skip counter** — running total displayed in the popup and as a badge on the toolbar icon. Click to reset.
 - **Settings sync** — your toggles travel with you across signed-in Chrome profiles
 - **5s Seek** — adds a 5-second rewind & skip pair after Netflix's native 10s buttons
+- **90s Seek** — adds a 90-second rewind & skip pair for jumping past long stretches
 - **Picture-in-Picture** — pop the video into a floating window with one click
+- **Frame step** — keyboard-only: pause and nudge one frame at a time
+- **Playback speed** — 0.1×–4× with `<` / `>` shortcuts and a popup slider; persists across episodes
+- **Volume boost** — amplify up to 500% past Netflix's max, with an optional loudness normalizer
+- **Keyboard shortcuts** — seek, frame-step, speed, and PiP from the keyboard (see below)
 
 ## Install
 
@@ -52,15 +57,32 @@ A `WeakSet` of recently-clicked buttons prevents double-firing on rapid DOM muta
 
 ### Player controls
 
-The extension also injects extra buttons into Netflix's native control bar (`[data-uia="controls-standard"]`). To survive Netflix's rotating obfuscated CSS class names, the injected buttons clone the class list of an existing native control button at runtime, so they always match the current styling. Injection is idempotent and re-runs on each player DOM change, so toggling a control in the popup takes effect without a page reload.
+The extension injects extra buttons into Netflix's native control bar (`[data-uia="controls-standard"]`). To survive Netflix's rotating obfuscated CSS class names, the 5s/90s buttons clone an existing native control button at runtime, so they always match the current styling. Injection is idempotent and re-runs on each player DOM change, so toggling a control in the popup takes effect without a page reload.
+
+Seeking, playback speed, and volume are handled by a tiny **main-world script** (`injected.js`). Content scripts run in an isolated world and can't reach `window.netflix` or safely change `video.currentTime` (doing so desyncs Netflix's player). So the content script `postMessage`s requests, and `injected.js` performs them through Netflix's official player API (`seek`), the `<video>` element (`playbackRate`), and the Web Audio API (`GainNode` for boost, `DynamicsCompressorNode` for the normalizer — built once per video element).
+
+### Keyboard shortcuts
+
+Active on Netflix watch pages, ignored while typing in a text field:
+
+| Key | Action |
+|-----|--------|
+| `[` / `]` | Rewind / forward 5 seconds |
+| `Shift+[` / `Shift+]` | Rewind / forward 90 seconds |
+| `,` / `.` | Step one frame back / forward (pauses) |
+| `<` (`Shift+,`) / `>` (`Shift+.`) | Decrease / increase playback speed by 0.25× |
+| `p` | Toggle Picture-in-Picture |
+
+Frame-step assumes 24fps (most Netflix content); it seeks by one frame's worth of time and is approximate.
 
 ## Project layout
 
 ```
 netflix-auto-skip/
 ├── manifest.json      Manifest V3 — permissions, content script, popup, service worker
-├── content.js         Runs on netflix.com; observes DOM; clicks the buttons
-├── controls.js        Injects 5s seek and PiP buttons into the player bar
+├── content.js         Runs on netflix.com; observes DOM; clicks buttons; keyboard shortcuts
+├── controls.js        Injects 5s/90s seek + PiP buttons; posts player/audio commands
+├── injected.js        Main-world script: seek, frame-step, playback speed, Web Audio boost
 ├── background.js      Service worker — owns the skip-counter badge
 ├── popup.html         Popup UI (broadcast-deck aesthetic, custom flip switches)
 ├── popup.js           Reads/writes chrome.storage.sync; broadcasts changes to tabs
@@ -81,7 +103,7 @@ The extension does **not**:
 - execute any remotely-loaded code (everything is bundled in the package)
 - read your Netflix activity, history, or account info
 
-The only thing saved is four booleans (your toggle states) and one integer (the skip counter).
+The only thing saved is your toggle states, playback-speed/volume preferences, and a local skip counter.
 
 ## Updating the selectors
 
@@ -117,6 +139,7 @@ To validate your changes before zipping:
 node -e "JSON.parse(require('fs').readFileSync('manifest.json','utf8'))" && \
 node --check content.js && \
 node --check controls.js && \
+node --check injected.js && \
 node --check popup.js && \
 node --check background.js && \
 echo OK
@@ -126,17 +149,17 @@ echo OK
 
 ```bash
 cd netflix-auto-skip
-zip -r ../netflix-auto-skip-1.0.0.zip . -x ".*" -x "*.DS_Store" -x "preview*.html" -x "README.md"
+zip -r ../netflix-companion-1.2.0.zip . -x ".*" -x "*.DS_Store" -x "preview*.html" -x "README.md"
 ```
 
 `manifest.json` must sit at the zip root — don't include the parent folder.
 
 ## Roadmap
 
-- [ ] Skip Netflix ad breaks (for ad-tier subscribers) by speeding up `<video>` playback rate
+- [ ] Video adjustments (brightness/contrast, zoom-to-fill black bars)
+- [ ] Subtitle restyling (font size, color, drop the gray background box)
 - [ ] Per-show overrides ("don't skip intro for *Severance*")
-- [ ] Keyboard shortcut to pause auto-skip for one episode
-- [ ] Dark/light theme toggle for the popup
+- [ ] Remember playback speed & volume per profile
 
 ## Contributing
 
