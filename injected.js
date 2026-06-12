@@ -46,6 +46,4 @@
     if (!data || data.source !== "nf-companion") return;
     if (data.type === "seek") seekBy(data.delta);
   });
-
-  console.log("[netflix-companion/main] injected, ready for seek messages");
 })();
