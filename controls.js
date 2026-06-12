@@ -57,6 +57,10 @@ function makeSeekLabel(seconds) {
 // Track current speed index so the cycle button advances predictably.
 let speedIndex = 0;
 
+// Count of times we actually mutated the control bar. If this climbs without bound
+// while the video sits still, the injection is self-triggering the observer (a bug).
+let injectionCount = 0;
+
 function getVideo() {
   return document.querySelector("video");
 }
@@ -113,25 +117,61 @@ async function togglePip(btn) {
   }
 }
 
-// Inject all enabled buttons into the control bar. Idempotent: removes our previous
-// buttons first, then re-adds according to current settings. Safe to call on every
-// observer tick.
+// Desired button ids per setting key, so we can detect "already in the right state"
+// without mutating the DOM. The MutationObserver that drives this watches the whole
+// document subtree, so injectControls MUST NOT write to the DOM unless something is
+// actually wrong — otherwise its own writes re-trigger the observer in an infinite
+// loop (runaway CPU/memory, and Netflix's control bar never gets to render).
+const CONTROL_IDS = {
+  show5sButtons: ["nf-back5", "nf-fwd5"],
+  showSpeedButton: ["nf-speed"],
+  showPipButton: ["nf-pip"],
+};
+
+// Compute which of our button ids SHOULD be present given current settings.
+function desiredIds(settings) {
+  const ids = new Set();
+  for (const [key, btnIds] of Object.entries(CONTROL_IDS)) {
+    if (settings[key]) btnIds.forEach((id) => ids.add(id));
+  }
+  return ids;
+}
+
+// Read-only check: are exactly the desired buttons present, no more, no fewer?
+function controlsInDesiredState(cluster, settings) {
+  const want = desiredIds(settings);
+  const have = new Set(
+    Array.from(cluster.querySelectorAll(`.${MARK}`)).map((el) => el.dataset.nfControl)
+  );
+  if (want.size !== have.size) return false;
+  for (const id of want) if (!have.has(id)) return false;
+  return true;
+}
+
+// Inject/sync our buttons into the control bar. This runs on every observer tick, so
+// the fast path is a pure READ: if the buttons already match the desired state we
+// return without touching the DOM (no self-trigger, no loop). We only mutate when the
+// state is wrong (first injection, a toggle changed, or Netflix re-rendered the bar).
 function injectControls(settings) {
   const found = findControlCluster();
   if (!found) return;
   const { cluster, template } = found;
 
-  // Remove any of our previously-injected buttons so toggles take effect live and
-  // we never double-insert when Netflix re-renders the bar.
+  // Fast path: nothing to do. Pure read — does not mutate the DOM.
+  if (controlsInDesiredState(cluster, settings)) return;
+
+  // State is wrong — rebuild our buttons. Remove ours first, then re-add.
   cluster.querySelectorAll(`.${MARK}`).forEach((el) => el.remove());
 
   if (settings.show5sButtons) {
     const back = makeButton(template, "Rewind 5 seconds", makeIcon("rewind5"));
+    back.dataset.nfControl = "nf-back5";
     back.style.position = "relative";
     back.appendChild(makeSeekLabel(5));
     back.addEventListener("click", () => seek(-5));
 
     const fwd = makeButton(template, "Forward 5 seconds", makeIcon("forward5"));
+    fwd.dataset.nfControl = "nf-fwd5";
     fwd.style.position = "relative";
     fwd.appendChild(makeSeekLabel(5));
     fwd.addEventListener("click", () => seek(5));
@@ -150,13 +190,18 @@ function injectControls(settings) {
     const currentRate = video ? video.playbackRate : 1;
     speedInner.textContent = currentRate === 1 ? "1x" : `${currentRate}x`;
     const speedBtn = makeButton(template, "Playback speed", speedInner);
+    speedBtn.dataset.nfControl = "nf-speed";
     speedBtn.addEventListener("click", () => cycleSpeed(speedBtn));
     cluster.appendChild(speedBtn);
   }
 
   if (settings.showPipButton) {
     const pipBtn = makeButton(template, "Picture in picture", makeIcon("pip"));
+    pipBtn.dataset.nfControl = "nf-pip";
     pipBtn.addEventListener("click", () => togglePip(pipBtn));
     cluster.appendChild(pipBtn);
   }
+
+  injectionCount += 1;
+  console.log("[netflix-companion] injected controls (mutation #" + injectionCount + ")");
 }
