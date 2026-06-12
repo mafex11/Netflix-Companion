@@ -34,11 +34,21 @@ const recentClicks = new WeakSet();
 
 chrome.storage.sync.get(DEFAULTS).then((stored) => {
   settings = { ...DEFAULTS, ...stored };
+  if (location.pathname.startsWith("/watch")) applyMediaSettings();
 });
+
+// Push speed/volume/normalizer into the main world. setSpeed/setVolume/setNormalizer
+// are global posters from controls.js; they call ensureInjected() themselves.
+function applyMediaSettings() {
+  if (typeof setSpeed === "function") setSpeed(settings.playbackSpeed);
+  if (typeof setVolume === "function") setVolume(settings.volumeBoost);
+  if (typeof setNormalizer === "function") setNormalizer(settings.normalizer);
+}
 
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg?.type === "settings") {
     settings = { ...DEFAULTS, ...msg.settings };
+    if (location.pathname.startsWith("/watch")) applyMediaSettings();
   }
 });
 
@@ -89,6 +99,15 @@ function isTypingTarget(el) {
   return tag === "INPUT" || tag === "TEXTAREA" || el.isContentEditable;
 }
 
+// Change speed by a step, clamp to [0.1, 4], persist, push to player, and toast.
+function nudgeSpeed(step) {
+  const next = Math.min(4, Math.max(0.1, Math.round((settings.playbackSpeed + step) * 100) / 100));
+  settings.playbackSpeed = next;
+  if (typeof setSpeed === "function") setSpeed(next);
+  if (typeof showToast === "function") showToast(next + "×");
+  chrome.storage.sync.set({ playbackSpeed: next }).catch(() => {});
+}
+
 function onKeydown(e) {
   if (!location.pathname.startsWith("/watch")) return;
   if (isTypingTarget(e.target)) return;
@@ -103,12 +122,12 @@ function onKeydown(e) {
       seek(e.shiftKey ? 90 : 5);
       break;
     case "Comma":
-      if (e.shiftKey) { handled = false; break; }
-      frameStep(-1);
+      if (e.shiftKey) nudgeSpeed(-0.25);
+      else frameStep(-1);
       break;
     case "Period":
-      if (e.shiftKey) { handled = false; break; }
-      frameStep(1);
+      if (e.shiftKey) nudgeSpeed(0.25);
+      else frameStep(1);
       break;
     case "KeyP":
       if (e.shiftKey) { handled = false; break; }
