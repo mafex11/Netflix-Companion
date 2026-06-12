@@ -61,6 +61,7 @@ The extension also injects extra buttons into Netflix's native control bar (`[da
 netflix-auto-skip/
 ├── manifest.json      Manifest V3 — permissions, content script, popup, service worker
 ├── content.js         Runs on netflix.com; observes DOM; clicks the buttons
+├── controls.js        Injects 5s seek, speed, and PiP buttons into the player bar
 ├── background.js      Service worker — owns the skip-counter badge
 ├── popup.html         Popup UI (broadcast-deck aesthetic, custom flip switches)
 ├── popup.js           Reads/writes chrome.storage.sync; broadcasts changes to tabs
@@ -116,6 +117,7 @@ To validate your changes before zipping:
 ```bash
 node -e "JSON.parse(require('fs').readFileSync('manifest.json','utf8'))" && \
 node --check content.js && \
+node --check controls.js && \
 node --check popup.js && \
 node --check background.js && \
 echo OK
