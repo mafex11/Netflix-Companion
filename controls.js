@@ -330,13 +330,13 @@ function injectControls(settings) {
     ensureInjected();
     const back90 = cloneNativeSeek(
       group, "control-back10", "nf-back90", "Rewind 90 seconds", "rewind5", "90",
-      () => seek(-90)
+      () => seek(90)
     );
     if (back90) placeButtonWithSpacing(back90);
 
     const fwd90 = cloneNativeSeek(
       group, "control-forward10", "nf-fwd90", "Forward 90 seconds", "forward5", "90",
-      () => seek(90)
+      () => seek(-90)
     );
     if (fwd90) placeButtonWithSpacing(fwd90);
   }
