@@ -315,13 +315,13 @@ function injectControls(settings) {
     ensureInjected(); // load the main-world seek helper before the user can click
     const backWrap = cloneNativeSeek(
       group, "control-back10", "nf-back5", "Rewind 5 seconds", "rewind5", "5",
-      () => seek(-5)
+      () => seek(5)
     );
     if (backWrap) placeButtonWithSpacing(backWrap);
 
     const fwdWrap = cloneNativeSeek(
       group, "control-forward10", "nf-fwd5", "Forward 5 seconds", "forward5", "5",
-      () => seek(5)
+      () => seek(-5)
     );
     if (fwdWrap) placeButtonWithSpacing(fwdWrap);
   }
