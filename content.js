@@ -116,18 +116,20 @@ function onKeydown(e) {
   let handled = true;
   switch (e.code) {
     case "BracketLeft":
-      seek(e.shiftKey ? -90 : -5);
+      // Rewind. seek()'s delta is inverted in injected.js, so back = positive.
+      seek(e.shiftKey ? 90 : 5);
       break;
     case "BracketRight":
-      seek(e.shiftKey ? 90 : 5);
+      // Forward.
+      seek(e.shiftKey ? -90 : -5);
       break;
     case "Comma":
       if (e.shiftKey) nudgeSpeed(-0.25);
-      else frameStep(-1);
+      else frameStep(1); // step back (frameStep dir is inverted like seek)
       break;
     case "Period":
       if (e.shiftKey) nudgeSpeed(0.25);
-      else frameStep(1);
+      else frameStep(-1); // step forward
       break;
     case "KeyP":
       if (e.shiftKey) { handled = false; break; }
