@@ -270,7 +270,7 @@
           <a href="#shortcuts">Shortcuts</a>
           <a href="#privacy">Privacy</a>
         </div>
-        <a href="#get" class="btn btn-primary">Add to Chrome</a>
+        <a href="#" id="storeNav" class="btn btn-primary">Add to Chrome</a>
       </div>
     </nav>
 
@@ -282,7 +282,7 @@
         <h1 class="reveal d1">Your Netflix,<br /><span class="acc">supercharged.</span></h1>
         <p class="lede reveal d2">The player controls Netflix left out. Auto-skip intros and recaps, jump 5 or 90 seconds, pop out picture-in-picture, change speed, boost volume past 100% — without lifting your hand off the keyboard.</p>
         <div class="hero-cta reveal d3">
-          <a href="#get" class="btn btn-primary">
+          <a href="#" id="storeHero" class="btn btn-primary">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 6a4 4 0 014 4h6A12 12 0 0012 0v6zm-7.46 1.5l3 5.2A4 4 0 0012 16l-3 5.2A12 12 0 014.54 9.5zM12 16a4 4 0 01-3.46-2L3 8.8A12 12 0 0022.9 13H12a4 4 0 010 3z"/></svg>
             Add to Chrome
           </a>
@@ -492,11 +492,17 @@
       tick();
       window.addEventListener("scroll", tick, { passive: true });
 
-      // central place to drop real URLs once live
-      const STORE_URL = "#"; // TODO: Chrome Web Store URL after review
+      // central place for the live URLs
+      const STORE_URL = "https://chromewebstore.google.com/detail/netflix-companion/ndmlfjmmoaclmcaeiihgfomkjmdfphig";
       const GITHUB_URL = "https://github.com/mafex11/Netflix-Companion";
-      ["storeLink"].forEach((id) => { const a = document.getElementById(id); if (a && STORE_URL !== "#") a.href = STORE_URL; });
-      ["ghLink", "ghLink2"].forEach((id) => { const a = document.getElementById(id); if (a && GITHUB_URL !== "#") a.href = GITHUB_URL; });
+      ["storeNav", "storeHero", "storeLink"].forEach((id) => {
+        const a = document.getElementById(id);
+        if (a && STORE_URL !== "#") { a.href = STORE_URL; a.target = "_blank"; a.rel = "noopener"; }
+      });
+      ["ghLink", "ghLink2"].forEach((id) => {
+        const a = document.getElementById(id);
+        if (a && GITHUB_URL !== "#") { a.href = GITHUB_URL; a.target = "_blank"; a.rel = "noopener"; }
+      });
     </script>
   </body>
 </html>

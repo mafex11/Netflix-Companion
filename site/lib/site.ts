@@ -1,5 +1,6 @@
 // Central place for launch URLs — fill in once the extension is approved & repo is public.
-export const STORE_URL = "#"; // Chrome Web Store listing — fill in after review
+export const STORE_URL =
+  "https://chromewebstore.google.com/detail/netflix-companion/ndmlfjmmoaclmcaeiihgfomkjmdfphig";
 export const GITHUB_URL = "https://github.com/mafex11/Netflix-Companion";
 
 export const SKIP_FEATURES = [
